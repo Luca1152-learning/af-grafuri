@@ -49,6 +49,7 @@ private:
     int m_n, m_m;
     vector<int> m_listAd[nMax];
     vector<vector<int>> m_listaMuchii;
+    vector<pair<int, pair<int, int>>> m_listaMuchiiPonderat;
 
     // DFS - https://www.infoarena.ro/problema/dfs
     bool m_dfsViz[nMax] = {};
@@ -72,6 +73,10 @@ private:
     map<pair<int, int>, bool> m_criticeToRemove;
     vector<vector<int>> m_critice;
     int m_criticeLow[nMax] = {}; // Id-ul nodului minim in care te poti intoarce din nodul i
+
+    // Arbore partial de cost minim - https://www.infoarena.ro/problema/apm
+    int m_apcmCost = 0;
+    vector<pair<int, int>> m_apcmResult;
 
 
     // ---------------- Functii private ----------------
@@ -186,6 +191,14 @@ public:
 
 
     /*************** Algoritmi generali ***************/
+    void ponderatCitesteListaMuchii(ifstream &in) {
+        for (int i = 0; i < m_m; i++) {
+            int x, y, c;
+            in >> x >> y >> c;
+            m_listaMuchiiPonderat.push_back({c, {x, y}});
+        }
+    }
+
     void DFS(int k) {
         m_dfsViz[k] = true;
 
@@ -233,6 +246,35 @@ public:
         return true;
     }
 
+    void construiesteApcm() {
+        // Algoritmul lui Kruskal: luam muchiile cu cel mai mic cost, cat timp nu
+        // se creeaza cicluri.
+        sort(m_listaMuchiiPonderat.begin(), m_listaMuchiiPonderat.end());
+
+        // Foloseste un disjoint set pentru a sti daca muchia de la x la y va crea
+        // un ciclu (valoarea fiecarui nod reprezentand componenta conexa din care
+        // face parte).
+        DisjointSet ds(m_n);
+
+        for (auto &m: m_listaMuchiiPonderat) {
+            int c = m.first, x = m.second.first, y = m.second.second;
+            if (ds.cauta(x) != ds.cauta(y)) {
+                ds.uneste(x, y);
+
+                // Adauga la rezultat muchia gasita
+                m_apcmCost += c;
+                m_apcmResult.push_back({x, y});
+            }
+        }
+    }
+
+    const auto &getApcmResult() {
+        return m_apcmResult;
+    }
+
+    auto getApcmCost() {
+        return m_apcmCost;
+    }
 
     /*************** Grafuri neorientate ***************/
     void neorientatCitesteListaMuchii(ifstream &in) {
@@ -320,22 +362,15 @@ int main() {
     cin.tie(nullptr);
 
     // I/O
-    ifstream in("disjoint.in");
-    ofstream out("disjoint.out");
+    ifstream in("apm.in");
+    ofstream out("apm.out");
 
     int n, m;
     in >> n >> m;
 
-    DisjointSet d(n);
-    for (int i = 0; i < m; i++) {
-        int cod, x, y;
-        in >> cod >> x >> y;
-        if (cod == 1) {
-            d.uneste(x, y);
-        } else if (cod == 2) {
-            out << ((d.cauta(x) == d.cauta(y)) ? "DA" : "NU") << "\n";
-        }
-    }
+
+    // TODO
+
 
     out.close();
     return 0;
