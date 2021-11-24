@@ -1,6 +1,3 @@
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "modernize-use-transparent-functors"
-
 #include <iostream>
 #include <list>
 #include <queue>
@@ -8,10 +5,44 @@
 #include <stack>
 #include <fstream>
 #include <map>
+#include <algorithm>
 
 const int nMax = 100005;
 
 using namespace std;
+
+class DisjointSet {
+private:
+    int m_parinte[nMax] = {}, m_dimensiune[nMax] = {};
+
+public:
+    explicit DisjointSet(int n) {
+        for (int i = 1; i <= n; i++) {
+            m_parinte[i] = i;
+            m_dimensiune[i] = 1;
+        }
+    }
+
+    int cauta(int x) {
+        while (x != m_parinte[x]) {
+            x = m_parinte[x];
+        }
+        return x;
+    }
+
+    void uneste(int x, int y) {
+        int parinteX = cauta(x), parinteY = cauta(y);
+
+        // Uneste arborele mai mic la arborele mai mare, pentru o complexitate mai buna
+        if (m_dimensiune[parinteX] >= m_dimensiune[parinteY]) {
+            m_parinte[parinteY] = parinteX;
+            m_dimensiune[parinteX] += m_dimensiune[parinteY];
+        } else {
+            m_parinte[parinteX] = parinteY;
+            m_dimensiune[parinteY] += m_dimensiune[parinteX];
+        }
+    }
+};
 
 class Graf {
 private:
@@ -289,22 +320,23 @@ int main() {
     cin.tie(nullptr);
 
     // I/O
-    ifstream in("critice.in");
-    ofstream out("critice.out");
+    ifstream in("disjoint.in");
+    ofstream out("disjoint.out");
 
     int n, m;
     in >> n >> m;
 
-    Graf g(n, m);
-    g.neorientatCitesteListaAdiacenta(in);
-    in.close();
-
-
-    // TODO
-
+    DisjointSet d(n);
+    for (int i = 0; i < m; i++) {
+        int cod, x, y;
+        in >> cod >> x >> y;
+        if (cod == 1) {
+            d.uneste(x, y);
+        } else if (cod == 2) {
+            out << ((d.cauta(x) == d.cauta(y)) ? "DA" : "NU") << "\n";
+        }
+    }
 
     out.close();
     return 0;
 }
-
-#pragma clang diagnostic pop
