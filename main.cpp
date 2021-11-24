@@ -4,6 +4,7 @@
 #include <vector>
 #include <stack>
 #include <fstream>
+#include <map>
 
 const int nMax = 100005;
 
@@ -13,6 +14,7 @@ class Graf {
 private:
     int m_n, m_m;
     vector<int> m_listAd[nMax];
+    vector<vector<int>> m_listaMuchii;
 
     // DFS - https://www.infoarena.ro/problema/dfs
     bool m_dfsViz[nMax] = {};
@@ -31,6 +33,11 @@ private:
     list<list<int>> m_biconexComps;
     stack<int> m_biconexStack;
     int m_biconexLow[nMax] = {};
+
+    // Muchii critice - https://leetcode.com/problems/critical-connections-in-a-network/
+    map<pair<int, int>, bool> m_criticeToRemove;
+    vector<vector<int>> m_critice;
+    int m_criticeLow[nMax] = {}; // Id-ul nodului minim in care te poti intoarce din nodul i
 
 
     // ---------------- Functii private ----------------
@@ -53,7 +60,7 @@ private:
             }
         }
 
-        // Am ajun
+        // Am ajuns la nodul de start al ctc-ului explorat in prezent
         if (m_ctcId[x] == m_ctcLow[x]) {
             list<int> compCurr;
             while (true) {
@@ -118,6 +125,27 @@ private:
         }
     }
 
+    void neorientatMuchiiCriticeDfs(int x, int prev, int id) {
+        m_criticeLow[x] = id;
+
+        for (auto y: m_listAd[x]) {
+            // Nu te intoarce in nodul din care ai plecat
+            if (y == prev) continue;
+
+            // Ruleaza DFS in continuare, cu un id mai mare
+            if (m_criticeLow[y] == 0) neorientatMuchiiCriticeDfs(y, x, id + 1);
+
+            // Nodul vizitat din cel curent face parte dintr-un ciclu,
+            // asa ca trebuie sa excludem muchia x-y
+            if (m_criticeLow[y] < id + 1) {
+                m_criticeToRemove[{x, y}] = m_criticeToRemove[{y, x}] = true;
+            }
+
+            // Actualizeaza low-ul nodului curent
+            m_criticeLow[x] = min(m_criticeLow[x], m_criticeLow[y]);
+        }
+    }
+
 public:
     // ---------------- Interfata publica ----------------
     explicit Graf(int n = 0, int m = 0) : m_n(n), m_m(m) {}
@@ -154,6 +182,21 @@ public:
 
 
     /*************** Grafuri neorientate ***************/
+    void neorientatCitesteListaMuchii(ifstream &in) {
+        for (int i = 0; i < m_m; i++) {
+            int x, y;
+            in >> x >> y;
+            m_listaMuchii.push_back({x, y});
+        }
+    }
+
+    void neorientatListaMuchiiToListaAdiacenta() {
+        for (auto &e: m_listaMuchii) {
+            m_listAd[e[0]].push_back(e[1]);
+            m_listAd[e[1]].push_back(e[0]);
+        }
+    }
+
     void neorientatCitesteListaAdiacenta(ifstream &in) {
         for (int i = 0; i < m_m; i++) {
             int x, y;
@@ -181,6 +224,19 @@ public:
             }
         }
         return m_biconexComps;
+    }
+
+    const auto &neorientatMuchiiCritice() {
+        neorientatMuchiiCriticeDfs(0, -1, 1);
+
+        // In rezultat, punem muchiile ce nu au fost marcate ca trebuind sa fie sterse
+        for (auto &e: m_listaMuchii) {
+            if (!m_criticeToRemove[{e[0], e[1]}]) {
+                m_critice.push_back(e);
+            }
+        }
+
+        return m_critice;
     }
 
 
@@ -211,8 +267,8 @@ int main() {
     cin.tie(nullptr);
 
     // I/O
-    ifstream in("biconex.in");
-    ofstream out("biconex.out");
+    ifstream in("critice.in");
+    ofstream out("critice.out");
 
     int n, m;
     in >> n >> m;
@@ -221,16 +277,9 @@ int main() {
     g.neorientatCitesteListaAdiacenta(in);
     in.close();
 
-    const auto &comps = g.neorientatBiconexe();
 
-    // Afisare
-    out << comps.size() << "\n";
-    for (auto &comp: comps) {
-        for (auto x: comp) {
-            out << x << " ";
-        }
-        out << "\n";
-    }
+    // TODO
+
 
     out.close();
     return 0;
