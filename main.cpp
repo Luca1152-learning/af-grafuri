@@ -1,3 +1,6 @@
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "modernize-use-transparent-functors"
+
 #include <iostream>
 #include <list>
 #include <queue>
@@ -180,6 +183,25 @@ public:
         return m_bfsDist;
     }
 
+    static bool potiConstruiGraf(vector<int> grade) {
+        // Algoritmul Havel-Hakimi
+        while (true) {
+            sort(grade.begin(), grade.end(), greater<int>());
+
+            if (grade[0] == 0) break;
+            if (grade[0] > grade.size() - 1) return false;
+
+            int maxVal = grade[0];
+            for (int i = 1; i <= maxVal; i++) {
+                grade[0]--;
+                grade[i]--;
+                if (grade[i] < 0) return false;
+            }
+        }
+
+        return true;
+    }
+
 
     /*************** Grafuri neorientate ***************/
     void neorientatCitesteListaMuchii(ifstream &in) {
@@ -285,3 +307,4 @@ int main() {
     return 0;
 }
 
+#pragma clang diagnostic pop
