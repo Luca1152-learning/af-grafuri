@@ -6,6 +6,7 @@
 #include <fstream>
 #include <map>
 #include <algorithm>
+#include <climits>
 
 const int nMax = 100005;
 
@@ -48,6 +49,7 @@ class Graf {
 private:
     int m_n, m_m;
     vector<int> m_listAd[nMax];
+    vector<pair<int, int>> m_ponderatListaAd[nMax];
     vector<vector<int>> m_listaMuchii;
     vector<pair<int, pair<int, int>>> m_listaMuchiiPonderat;
 
@@ -77,6 +79,12 @@ private:
     // Arbore partial de cost minim - https://www.infoarena.ro/problema/apm
     int m_apcmCost = 0;
     vector<pair<int, int>> m_apcmResult;
+
+    // Bellman-Ford - https://infoarena.ro/problema/bellmanford
+    vector<int> m_bellmanDist = vector<int>(nMax, INT_MAX);
+    int m_bellmanPuneriInCoada[nMax] = {}, m_bellmanInQueue[nMax] = {};
+    queue<int> m_bellmanQueue;
+    bool m_bellmanCircuitCostNegativ = false;
 
 
     // ---------------- Functii private ----------------
@@ -344,6 +352,14 @@ public:
         }
     }
 
+    void orientatPonderatCitesteListaAdiacenta(ifstream &in) {
+        for (int i = 0; i < m_m; i++) {
+            int x, y, c;
+            in >> x >> y >> c;
+            m_ponderatListaAd[x].push_back({y, c});
+        }
+    }
+
     const auto &orientatCtc() {
         // Algoritmul lui Tarjan
         for (int i = 1; i <= m_n; i++) {
@@ -354,6 +370,61 @@ public:
         }
         return m_ctc;
     }
+
+    void orientatRuleazaBellmanFord(int start) {
+        // Gaseste graful de costuri minime, plecand din start la celelalte n-1 noduri.
+        // Putem avea circuit de cost negativ -> va fi detectat.
+
+        // Incepem cu optimizarile plecand din nodul de start
+        m_bellmanQueue.push(start);
+        m_bellmanDist[start] = 0;
+        m_bellmanInQueue[start] = true;
+        m_bellmanPuneriInCoada[start] = 1;
+
+        // Ne oprim cand nu mai avem nimic de optimizat / am gasit un circuit cu cost negativ
+        while (!m_bellmanQueue.empty() && !m_bellmanCircuitCostNegativ) {
+            int x = m_bellmanQueue.front();
+            m_bellmanQueue.pop();
+
+            // Marcam nodul curent ca ne mai fiind in queue
+            m_bellmanInQueue[x] = false;
+
+            // Luam toate arcele la rand si incercam sa optimizam distante, folosindu-le
+            for (auto &e: m_ponderatListaAd[x]) {
+                int y = e.first, c = e.second;
+
+                // Am gasit un arc (de la x la y) ce optimizeaza costul lui y (= obtinem
+                // o distanta mai mica din start->y daca mergem prin x)
+                if (m_bellmanDist[y] > m_bellmanDist[x] + c) {
+                    m_bellmanDist[y] = m_bellmanDist[x] + c;
+
+                    // Daca y nu e deja in coada, pune-l (facem verificarea ca sa nu
+                    // il adaugam de mai multe ori in coada), pentru ca, optimizand
+                    // distanta pana la el, putem optimiza distante si plecand din el.
+                    if (!m_bellmanInQueue[y]) {
+                        m_bellmanQueue.push(y);
+                        m_bellmanInQueue[y] = true;
+
+                        // Numara de cate ori au fost puse in coada nodurile. Daca un nod
+                        // a fost pus de >= n ori (=> n optimizari), inseamna ca am gasit
+                        // un circuit de cost negativ.
+                        m_bellmanPuneriInCoada[y]++;
+                        if (m_bellmanPuneriInCoada[y] >= m_n) {
+                            m_bellmanCircuitCostNegativ = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    bool circuitNegativBellmanFord() {
+        return m_bellmanCircuitCostNegativ;
+    }
+
+    const auto &getBellmanFordDists() {
+        return m_bellmanDist;
+    }
 };
 
 int main() {
@@ -362,15 +433,25 @@ int main() {
     cin.tie(nullptr);
 
     // I/O
-    ifstream in("apm.in");
-    ofstream out("apm.out");
+    ifstream in("bellmanford.in");
+    ofstream out("bellmanford.out");
 
     int n, m;
     in >> n >> m;
 
+    Graf g(n, m);
+    g.orientatPonderatCitesteListaAdiacenta(in);
+    in.close();
 
-    // TODO
-
+    g.orientatRuleazaBellmanFord(1);
+    if (g.circuitNegativBellmanFord()) {
+        out << "Ciclu negativ!";
+    } else {
+        const auto &dists = g.getBellmanFordDists();
+        for (int i = 2; i <= n; i++) {
+            out << dists[i] << " ";
+        }
+    }
 
     out.close();
     return 0;
