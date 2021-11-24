@@ -5,6 +5,7 @@
 #include <stack>
 #include <fstream>
 #include <map>
+#include <set>
 #include <algorithm>
 #include <climits>
 
@@ -85,6 +86,10 @@ private:
     int m_bellmanPuneriInCoada[nMax] = {}, m_bellmanInQueue[nMax] = {};
     queue<int> m_bellmanQueue;
     bool m_bellmanCircuitCostNegativ = false;
+
+    // Dijkstra - https://infoarena.ro/problema/dijkstra
+    vector<int> m_dijkstraDist = vector<int>(nMax, INT_MAX);
+    set<pair<int, int>> m_dijkstraMinSet; // "min".. doar e un ordered set (crescator)
 
 
     // ---------------- Functii private ----------------
@@ -425,6 +430,39 @@ public:
     const auto &getBellmanFordDists() {
         return m_bellmanDist;
     }
+
+    const auto &orientatRuleazaDijkstra(int start) {
+        // Incepem algoritmul din nodul de start
+        m_dijkstraDist[start] = 0;
+        // Punem in set perechea {0, [nod start]}, 0 fiind distanta de la start pana la el insusi
+        m_dijkstraMinSet.insert({0, start});
+
+        while (!m_dijkstraMinSet.empty()) {
+            // Procesam nodul de la distanta cea mai mica fata de start
+            auto x = m_dijkstraMinSet.begin()->second;
+            m_dijkstraMinSet.erase(m_dijkstraMinSet.begin());
+
+            for (auto &e: m_ponderatListaAd[x]) {
+                auto y = e.first, c = e.second;
+
+                // Obtinem un drum mai scurt (fata de cel gasit) daca trecem prin x
+                if (m_dijkstraDist[y] > m_dijkstraDist[x] + c) {
+                    // Nodul y e deja marcat ca trebuind sa fie procesat => il scoatem din set, ca sa il readaugam
+                    // cu noua distanta, mai mica (ca sa nu pierdem timp incercand sa-l optimizam cu distanta veche
+                    // mai tarziu) -- 90p->100p
+                    if (m_dijkstraMinSet.count({m_dijkstraDist[y], y}) > 0) {
+                        m_dijkstraMinSet.erase(m_dijkstraMinSet.find({m_dijkstraDist[y], y}));
+                    }
+
+                    // Actualizam distanta lui y si il punem la (re)procesat
+                    m_dijkstraDist[y] = m_dijkstraDist[x] + c;
+                    m_dijkstraMinSet.insert({m_dijkstraDist[y], y});
+                }
+            }
+        }
+
+        return m_dijkstraDist;
+    }
 };
 
 int main() {
@@ -433,8 +471,8 @@ int main() {
     cin.tie(nullptr);
 
     // I/O
-    ifstream in("bellmanford.in");
-    ofstream out("bellmanford.out");
+    ifstream in("date.in");
+    ofstream out("date.out");
 
     int n, m;
     in >> n >> m;
@@ -443,15 +481,9 @@ int main() {
     g.orientatPonderatCitesteListaAdiacenta(in);
     in.close();
 
-    g.orientatRuleazaBellmanFord(1);
-    if (g.circuitNegativBellmanFord()) {
-        out << "Ciclu negativ!";
-    } else {
-        const auto &dists = g.getBellmanFordDists();
-        for (int i = 2; i <= n; i++) {
-            out << dists[i] << " ";
-        }
-    }
+
+    // TODO
+
 
     out.close();
     return 0;
