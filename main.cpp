@@ -8,6 +8,7 @@
 #include <set>
 #include <algorithm>
 #include <climits>
+#include <cstring>
 
 const int nMax = 100005;
 
@@ -90,6 +91,10 @@ private:
     // Dijkstra - https://infoarena.ro/problema/dijkstra
     vector<int> m_dijkstraDist = vector<int>(nMax, INT_MAX);
     set<pair<int, int>> m_dijkstraMinSet; // "min".. doar e un ordered set (crescator)
+
+    // Diametru arbore - https://www.infoarena.ro/problema/darb
+    bool m_diametruViz[nMax] = {};
+    int m_diametruNodMax = 0, m_diametruDistMax = 0;
 
 
     // ---------------- Functii private ----------------
@@ -345,6 +350,28 @@ public:
         }
 
         return m_critice;
+    }
+
+    void diametruDFS(int x, int dist) {
+        if (dist > m_diametruDistMax) {
+            m_diametruDistMax = dist;
+            m_diametruNodMax = x;
+        }
+        m_diametruViz[x] = 1;
+        for (auto &y: m_listAd[x]) {
+            if (!m_diametruViz[y]) {
+                diametruDFS(y, dist + 1);
+            }
+        }
+    }
+
+    int diametru() {
+        diametruDFS(1, 1);
+        m_diametruDistMax = 0;
+        memset(m_diametruViz, 0, sizeof(m_diametruViz));
+        diametruDFS(m_diametruNodMax, 1);
+
+        return m_diametruDistMax;
     }
 
 
