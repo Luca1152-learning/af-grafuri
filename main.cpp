@@ -10,6 +10,9 @@
 #include <climits>
 #include <cstring>
 
+#define INF ((1 << 30) - 1)
+// 2^30-1 ca sa nu fie overflow daca faci INF + INF
+
 const int nMax = 100005;
 
 using namespace std;
@@ -52,6 +55,7 @@ private:
     int m_n, m_m;
     vector<int> m_listAd[nMax];
     vector<pair<int, int>> m_ponderatListaAd[nMax];
+    int m_ponderatMatrice[105][105] = {};
     vector<vector<int>> m_listaMuchii;
     vector<pair<int, pair<int, int>>> m_listaMuchiiPonderat;
 
@@ -95,6 +99,9 @@ private:
     // Diametru arbore - https://www.infoarena.ro/problema/darb
     bool m_diametruViz[nMax] = {};
     int m_diametruNodMax = 0, m_diametruDistMax = 0;
+
+    // RoyFloyd - https://www.infoarena.ro/problema/royfloyd
+    int m_royFloydDists[105][105] = {};
 
 
     // ---------------- Functii private ----------------
@@ -200,6 +207,33 @@ private:
 
             // Actualizeaza low-ul nodului curent
             m_criticeLow[x] = min(m_criticeLow[x], m_criticeLow[y]);
+        }
+    }
+
+    void diametruDFS(int x, int dist) {
+        if (dist > m_diametruDistMax) {
+            m_diametruDistMax = dist;
+            m_diametruNodMax = x;
+        }
+        m_diametruViz[x] = 1;
+        for (auto &y: m_listAd[x]) {
+            if (!m_diametruViz[y]) {
+                diametruDFS(y, dist + 1);
+            }
+        }
+    }
+
+    void orientatRoyFloydSetup() {
+        for (int i = 1; i <= m_n; i++) {
+            for (int j = 1; j <= m_n; j++) {
+                if (i == j) {
+                    m_royFloydDists[i][j] = 0;
+                } else if (m_ponderatMatrice[i][j] == 0) {
+                    m_royFloydDists[i][j] = INF;
+                } else {
+                    m_royFloydDists[i][j] = m_ponderatMatrice[i][j];
+                }
+            }
         }
     }
 
@@ -352,19 +386,6 @@ public:
         return m_critice;
     }
 
-    void diametruDFS(int x, int dist) {
-        if (dist > m_diametruDistMax) {
-            m_diametruDistMax = dist;
-            m_diametruNodMax = x;
-        }
-        m_diametruViz[x] = 1;
-        for (auto &y: m_listAd[x]) {
-            if (!m_diametruViz[y]) {
-                diametruDFS(y, dist + 1);
-            }
-        }
-    }
-
     int diametru() {
         diametruDFS(1, 1);
         m_diametruDistMax = 0;
@@ -392,103 +413,35 @@ public:
         }
     }
 
-    const auto &orientatCtc() {
-        // Algoritmul lui Tarjan
+    void orientatPonderatCitesteMatricePonderi(ifstream &in) {
         for (int i = 1; i <= m_n; i++) {
-            // Nu am explorat nodul pana acum (neavand vreun id)
-            if (m_ctcId[i] == 0) {
-                orientatCtcDFS(i);
+            for (int j = 1; j <= m_n; j++) {
+                int p;
+                in >> p;
+                m_ponderatMatrice[i][j] = p;
             }
         }
-        return m_ctc;
     }
 
-    void orientatRuleazaBellmanFord(int start) {
-        // Gaseste graful de costuri minime, plecand din start la celelalte n-1 noduri.
-        // Putem avea circuit de cost negativ -> va fi detectat.
+    void orientatRoyFloyd() {
+        orientatRoyFloydSetup();
 
-        // Incepem cu optimizarile plecand din nodul de start
-        m_bellmanQueue.push(start);
-        m_bellmanDist[start] = 0;
-        m_bellmanInQueue[start] = true;
-        m_bellmanPuneriInCoada[start] = 1;
-
-        // Ne oprim cand nu mai avem nimic de optimizat / am gasit un circuit cu cost negativ
-        while (!m_bellmanQueue.empty() && !m_bellmanCircuitCostNegativ) {
-            int x = m_bellmanQueue.front();
-            m_bellmanQueue.pop();
-
-            // Marcam nodul curent ca ne mai fiind in queue
-            m_bellmanInQueue[x] = false;
-
-            // Luam toate arcele la rand si incercam sa optimizam distante, folosindu-le
-            for (auto &e: m_ponderatListaAd[x]) {
-                int y = e.first, c = e.second;
-
-                // Am gasit un arc (de la x la y) ce optimizeaza costul lui y (= obtinem
-                // o distanta mai mica din start->y daca mergem prin x)
-                if (m_bellmanDist[y] > m_bellmanDist[x] + c) {
-                    m_bellmanDist[y] = m_bellmanDist[x] + c;
-
-                    // Daca y nu e deja in coada, pune-l (facem verificarea ca sa nu
-                    // il adaugam de mai multe ori in coada), pentru ca, optimizand
-                    // distanta pana la el, putem optimiza distante si plecand din el.
-                    if (!m_bellmanInQueue[y]) {
-                        m_bellmanQueue.push(y);
-                        m_bellmanInQueue[y] = true;
-
-                        // Numara de cate ori au fost puse in coada nodurile. Daca un nod
-                        // a fost pus de >= n ori (=> n optimizari), inseamna ca am gasit
-                        // un circuit de cost negativ.
-                        m_bellmanPuneriInCoada[y]++;
-                        if (m_bellmanPuneriInCoada[y] >= m_n) {
-                            m_bellmanCircuitCostNegativ = true;
-                        }
+        // Nodul k = nodul pe care incercam sa il integram in drumul de la i la j
+        for (int k = 1; k <= m_n; k++) {
+            // Verificam toate drumurile daca pot fi scurtate folosind k drept nod intermediar
+            // (i -> ... -> k -> ... -> j)
+            for (int i = 1; i <= m_n; i++) {
+                for (int j = 1; j <= m_n; j++) {
+                    if (m_royFloydDists[i][k] + m_royFloydDists[k][j] < m_royFloydDists[i][j]) {
+                        m_royFloydDists[i][j] = m_royFloydDists[i][k] + m_royFloydDists[k][j];
                     }
                 }
             }
         }
     }
 
-    bool circuitNegativBellmanFord() {
-        return m_bellmanCircuitCostNegativ;
-    }
-
-    const auto &getBellmanFordDists() {
-        return m_bellmanDist;
-    }
-
-    const auto &orientatRuleazaDijkstra(int start) {
-        // Incepem algoritmul din nodul de start
-        m_dijkstraDist[start] = 0;
-        // Punem in set perechea {0, [nod start]}, 0 fiind distanta de la start pana la el insusi
-        m_dijkstraMinSet.insert({0, start});
-
-        while (!m_dijkstraMinSet.empty()) {
-            // Procesam nodul de la distanta cea mai mica fata de start
-            auto x = m_dijkstraMinSet.begin()->second;
-            m_dijkstraMinSet.erase(m_dijkstraMinSet.begin());
-
-            for (auto &e: m_ponderatListaAd[x]) {
-                auto y = e.first, c = e.second;
-
-                // Obtinem un drum mai scurt (fata de cel gasit) daca trecem prin x
-                if (m_dijkstraDist[y] > m_dijkstraDist[x] + c) {
-                    // Nodul y e deja marcat ca trebuind sa fie procesat => il scoatem din set, ca sa il readaugam
-                    // cu noua distanta, mai mica (ca sa nu pierdem timp incercand sa-l optimizam cu distanta veche
-                    // mai tarziu) -- 90p->100p
-                    if (m_dijkstraMinSet.count({m_dijkstraDist[y], y}) > 0) {
-                        m_dijkstraMinSet.erase(m_dijkstraMinSet.find({m_dijkstraDist[y], y}));
-                    }
-
-                    // Actualizam distanta lui y si il punem la (re)procesat
-                    m_dijkstraDist[y] = m_dijkstraDist[x] + c;
-                    m_dijkstraMinSet.insert({m_dijkstraDist[y], y});
-                }
-            }
-        }
-
-        return m_dijkstraDist;
+    const auto &orientatRoyFloydGetDists() {
+        return m_royFloydDists;
     }
 };
 
@@ -498,19 +451,26 @@ int main() {
     cin.tie(nullptr);
 
     // I/O
-    ifstream in("date.in");
-    ofstream out("date.out");
+    ifstream in("royfloyd.in");
+    ofstream out("royfloyd.out");
 
-    int n, m;
-    in >> n >> m;
+    int n;
+    in >> n;
 
-    Graf g(n, m);
-    g.orientatPonderatCitesteListaAdiacenta(in);
+    Graf g(n, 0);
+    g.orientatPonderatCitesteMatricePonderi(in);
     in.close();
 
+    g.orientatRoyFloyd();
 
     // TODO
-
+    const auto &dists = g.orientatRoyFloydGetDists();
+    for (int i = 1; i <= n; i++) {
+        for (int j = 1; j <= n; j++) {
+            out << dists[i][j] << " ";
+        }
+        out << "\n";
+    }
 
     out.close();
     return 0;
