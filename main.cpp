@@ -94,7 +94,7 @@ private:
 
     // Dijkstra - https://infoarena.ro/problema/dijkstra
     vector<int> m_dijkstraDist = vector<int>(nMax, INT_MAX);
-    set<pair<int, int>> m_dijkstraMinSet; // "min".. doar e un ordered set (crescator)
+    set<pair<int, int>> m_dijkstraMinHeap; // "min".. doar e un ordered set (crescator)
 
     // Diametru arbore - https://www.infoarena.ro/problema/darb
     bool m_diametruViz[nMax] = {};
@@ -426,6 +426,105 @@ public:
                 m_ponderatMatrice[i][j] = p;
             }
         }
+    }
+
+    const auto &orientatCtc() {
+        // Algoritmul lui Tarjan
+        for (int i = 1; i <= m_n; i++) {
+            // Nu am explorat nodul pana acum (neavand vreun id)
+            if (m_ctcId[i] == 0) {
+                orientatCtcDFS(i);
+            }
+        }
+        return m_ctc;
+    }
+
+    void orientatRuleazaBellmanFord(int start) {
+        // Gaseste graful de costuri minime, plecand din start la celelalte n-1 noduri.
+        // Putem avea circuit de cost negativ -> va fi detectat.
+
+        // Incepem cu optimizarile plecand din nodul de start
+        m_bellmanQueue.push(start);
+        m_bellmanDist[start] = 0;
+        m_bellmanInQueue[start] = true;
+        m_bellmanPuneriInCoada[start] = 1;
+
+        // Ne oprim cand nu mai avem nimic de optimizat / am gasit un circuit cu cost negativ
+        while (!m_bellmanQueue.empty() && !m_bellmanCircuitCostNegativ) {
+            int x = m_bellmanQueue.front();
+            m_bellmanQueue.pop();
+
+            // Marcam nodul curent ca ne mai fiind in queue
+            m_bellmanInQueue[x] = false;
+
+            // Luam toate arcele la rand si incercam sa optimizam distante, folosindu-le
+            for (auto &e: m_ponderatListaAd[x]) {
+                int y = e.first, c = e.second;
+
+                // Am gasit un arc (de la x la y) ce optimizeaza costul lui y (= obtinem
+                // o distanta mai mica din start->y daca mergem prin x)
+                if (m_bellmanDist[y] > m_bellmanDist[x] + c) {
+                    m_bellmanDist[y] = m_bellmanDist[x] + c;
+
+                    // Daca y nu e deja in coada, pune-l (facem verificarea ca sa nu
+                    // il adaugam de mai multe ori in coada), pentru ca, optimizand
+                    // distanta pana la el, putem optimiza distante si plecand din el.
+                    if (!m_bellmanInQueue[y]) {
+                        m_bellmanQueue.push(y);
+                        m_bellmanInQueue[y] = true;
+
+                        // Numara de cate ori au fost puse in coada nodurile. Daca un nod
+                        // a fost pus de >= n ori (=> n optimizari), inseamna ca am gasit
+                        // un circuit de cost negativ.
+                        m_bellmanPuneriInCoada[y]++;
+                        if (m_bellmanPuneriInCoada[y] >= m_n) {
+                            m_bellmanCircuitCostNegativ = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    bool circuitNegativBellmanFord() {
+        return m_bellmanCircuitCostNegativ;
+    }
+
+    const auto &getBellmanFordDists() {
+        return m_bellmanDist;
+    }
+
+    const auto &orientatRuleazaDijkstra(int start) {
+        // Incepem algoritmul din nodul de start
+        m_dijkstraDist[start] = 0;
+        // Punem in set perechea {0, [nod start]}, 0 fiind distanta de la start pana la el insusi
+        m_dijkstraMinHeap.insert({0, start});
+
+        while (!m_dijkstraMinHeap.empty()) {
+            // Procesam nodul de la distanta cea mai mica fata de start
+            auto x = m_dijkstraMinHeap.begin()->second;
+            m_dijkstraMinHeap.erase(m_dijkstraMinHeap.begin());
+
+            for (auto &e: m_ponderatListaAd[x]) {
+                auto y = e.first, c = e.second;
+
+                // Obtinem un drum mai scurt (fata de cel gasit) daca trecem prin x
+                if (m_dijkstraDist[y] > m_dijkstraDist[x] + c) {
+                    // Nodul y e deja marcat ca trebuind sa fie procesat => il scoatem din set, ca sa il readaugam
+                    // cu noua distanta, mai mica (ca sa nu pierdem timp incercand sa-l optimizam cu distanta veche
+                    // mai tarziu) -- 90p->100p
+                    if (m_dijkstraMinHeap.count({m_dijkstraDist[y], y}) > 0) {
+                        m_dijkstraMinHeap.erase(m_dijkstraMinHeap.find({m_dijkstraDist[y], y}));
+                    }
+
+                    // Actualizam distanta lui y si il punem la procesat
+                    m_dijkstraDist[y] = m_dijkstraDist[x] + c;
+                    m_dijkstraMinHeap.insert({m_dijkstraDist[y], y});
+                }
+            }
+        }
+
+        return m_dijkstraDist;
     }
 
     void orientatRoyFloyd() {
