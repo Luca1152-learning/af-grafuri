@@ -13,7 +13,7 @@
 #define INF ((1 << 30) - 1)
 // 2^30-1 ca sa nu fie overflow daca faci INF + INF
 
-const int nMax = 100005;
+const int nMax = 1005;
 
 using namespace std;
 
@@ -53,7 +53,7 @@ public:
 class Graf {
 private:
     int m_n, m_m;
-    vector<int> m_listAd[nMax];
+    vector<int> m_listaAd[nMax];
     vector<pair<int, int>> m_ponderatListaAd[nMax];
     int m_ponderatMatrice[105][105] = {};
     vector<vector<int>> m_listaMuchii;
@@ -103,6 +103,11 @@ private:
     // RoyFloyd - https://www.infoarena.ro/problema/royfloyd
     int m_royFloydDists[105][105] = {};
 
+    // Flux maxim - https://infoarena.ro/problema/maxflow
+    int m_fluxMaximCapacitate[1005][1005] = {}, m_fluxMaximFlux[1005][1005] = {},
+            m_fluxMaximParinti[1005] = {};
+    queue<int> m_fluxMaximQueue;
+
 
     // ---------------- Functii private ----------------
     void orientatCtcDFS(int x) {
@@ -110,7 +115,7 @@ private:
         m_ctcPeStiva[x] = true;
         m_ctcId[x] = m_ctcLow[x] = ++m_ctcUltId;
 
-        for (auto y: m_listAd[x]) {
+        for (auto y: m_listaAd[x]) {
             // Nu am explorat nodul pana acum (neavand vreun id)
             if (m_ctcId[y] == 0) {
                 orientatCtcDFS(y);
@@ -165,7 +170,7 @@ private:
         m_biconexLow[x] = id;
         m_biconexStack.push(x);
 
-        for (auto y: m_listAd[x]) {
+        for (auto y: m_listaAd[x]) {
             // Ignoram cazul in care ne intoarcem din nodul in care am plecat
             if (y == prev) continue;
 
@@ -192,7 +197,7 @@ private:
     void neorientatMuchiiCriticeDfs(int x, int prev, int id) {
         m_criticeLow[x] = id;
 
-        for (auto y: m_listAd[x]) {
+        for (auto y: m_listaAd[x]) {
             // Nu te intoarce in nodul din care ai plecat
             if (y == prev) continue;
 
@@ -216,7 +221,7 @@ private:
             m_diametruNodMax = x;
         }
         m_diametruViz[x] = 1;
-        for (auto &y: m_listAd[x]) {
+        for (auto &y: m_listaAd[x]) {
             if (!m_diametruViz[y]) {
                 diametruDFS(y, dist + 1);
             }
@@ -254,7 +259,7 @@ public:
     void DFS(int k) {
         m_dfsViz[k] = true;
 
-        for (auto x: m_listAd[k]) {
+        for (auto x: m_listaAd[k]) {
             if (!m_dfsViz[x]) {
                 DFS(x);
             }
@@ -269,7 +274,7 @@ public:
             int curr = m_bfsQueue.front();
             m_bfsQueue.pop();
 
-            for (auto i: m_listAd[curr]) {
+            for (auto i: m_listaAd[curr]) {
                 if (m_bfsDist[i] == 0) {
                     m_bfsDist[i] = m_bfsDist[curr] + 1;
                     m_bfsQueue.push(i);
@@ -339,8 +344,8 @@ public:
 
     void neorientatListaMuchiiToListaAdiacenta() {
         for (auto &e: m_listaMuchii) {
-            m_listAd[e[0]].push_back(e[1]);
-            m_listAd[e[1]].push_back(e[0]);
+            m_listaAd[e[0]].push_back(e[1]);
+            m_listaAd[e[1]].push_back(e[0]);
         }
     }
 
@@ -348,8 +353,8 @@ public:
         for (int i = 0; i < m_m; i++) {
             int x, y;
             in >> x >> y;
-            m_listAd[x].push_back(y);
-            m_listAd[y].push_back(x);
+            m_listaAd[x].push_back(y);
+            m_listaAd[y].push_back(x);
         }
     }
 
@@ -401,7 +406,7 @@ public:
         for (int i = 0; i < m_m; i++) {
             int x, y;
             in >> x >> y;
-            m_listAd[x].push_back(y);
+            m_listaAd[x].push_back(y);
         }
     }
 
@@ -443,6 +448,88 @@ public:
     const auto &orientatRoyFloydGetDists() {
         return m_royFloydDists;
     }
+
+    void citesteInputFluxMaxim(ifstream &in) {
+        for (int i = 0; i < m_m; i++) {
+            int x, y, c;
+            in >> x >> y >> c;
+            m_fluxMaximCapacitate[x][y] = c;
+            m_listaAd[x].push_back(y);
+            m_listaAd[y].push_back(x);
+        }
+    }
+
+    int orientatFluxMaximBFS(int start = 1) {
+        memset(m_fluxMaximParinti, 0, sizeof(m_fluxMaximParinti));
+
+        m_fluxMaximQueue.push(start);
+        m_fluxMaximParinti[start] = -1;
+
+        while (!m_fluxMaximQueue.empty()) {
+            int x = m_fluxMaximQueue.front();
+            m_fluxMaximQueue.pop();
+
+            // Din moment ce am facut graful unul neorientat (pentru a avea acces la vecinii nodului destinatie),
+            // am putea sa ne intoarcem din nodul final in alte noduri inca nevizitate, dar nu vrem asta
+            if (x == m_n) {
+                continue;
+            }
+
+            for (auto &y: m_listaAd[x]) {
+                // Daca nu am vizitat nodul y in BFS-ul curent si daca inca mai putem pompa
+                // flux prin lantul x-y, viziteaza-l
+                if (!m_fluxMaximParinti[y] && m_fluxMaximCapacitate[x][y] - m_fluxMaximFlux[x][y] > 0) {
+                    m_fluxMaximQueue.push(y);
+                    m_fluxMaximParinti[y] = x;
+                }
+            }
+        }
+
+        // Returnam daca am ajuns la destinatie cu parcurgerea curenta
+        return m_fluxMaximParinti[m_n];
+    }
+
+    int orientatFluxMaxim() {
+        // Algoritmul Edmonds-Karp
+
+        int fluxMaximTotal = 0;
+
+        while (orientatFluxMaximBFS()) {
+            // Am creat arborele BFS -> ne intoarcem pe fiecare ruta posibila, folosindu-ne de vecinii
+            // nodului final
+            for (auto &x: m_listaAd[m_n]) {
+                if (!m_fluxMaximParinti[x] || m_fluxMaximCapacitate[x][m_n] - m_fluxMaximFlux[x][m_n] == 0) {
+                    continue;
+                }
+
+                m_fluxMaximParinti[m_n] = x;
+
+                // Gaseste fluxul minim ce poate fi pompat pe lantul gasit de BFS
+                int fluxMinimLant = INT_MAX, curr = m_n;
+                while (m_fluxMaximParinti[curr] != -1) {
+                    int prev = m_fluxMaximParinti[curr];
+                    fluxMinimLant = min(fluxMinimLant, m_fluxMaximCapacitate[prev][curr] - m_fluxMaximFlux[prev][curr]);
+                    curr = prev;
+                }
+                if (fluxMinimLant == 0) {
+                    continue;
+                }
+
+                // Actualizeaza fluxurile
+                curr = m_n;
+                while (m_fluxMaximParinti[curr] != -1) {
+                    int prev = m_fluxMaximParinti[curr];
+                    m_fluxMaximFlux[prev][curr] += fluxMinimLant;
+                    m_fluxMaximFlux[curr][prev] -= fluxMinimLant;
+                    curr = prev;
+                }
+
+                fluxMaximTotal += fluxMinimLant;
+            }
+        }
+
+        return fluxMaximTotal;
+    }
 };
 
 int main() {
@@ -451,26 +538,18 @@ int main() {
     cin.tie(nullptr);
 
     // I/O
-    ifstream in("royfloyd.in");
-    ofstream out("royfloyd.out");
+    ifstream in("maxflow.in");
+    ofstream out("maxflow.out");
 
-    int n;
-    in >> n;
+    int n, m;
+    in >> n >> m;
 
-    Graf g(n, 0);
-    g.orientatPonderatCitesteMatricePonderi(in);
+    Graf g(n, m);
+    g.citesteInputFluxMaxim(in);
     in.close();
 
-    g.orientatRoyFloyd();
-
-    // TODO
-    const auto &dists = g.orientatRoyFloydGetDists();
-    for (int i = 1; i <= n; i++) {
-        for (int j = 1; j <= n; j++) {
-            out << dists[i][j] << " ";
-        }
-        out << "\n";
-    }
+    int fluxMaxim = g.orientatFluxMaxim();
+    out << fluxMaxim;
 
     out.close();
     return 0;
