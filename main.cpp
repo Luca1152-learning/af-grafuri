@@ -13,7 +13,7 @@
 #define INF ((1 << 30) - 1)
 // 2^30-1 ca sa nu fie overflow daca faci INF + INF
 
-const int nMax = 1005;
+const int nMax = 105;
 
 using namespace std;
 
@@ -60,53 +60,68 @@ private:
     vector<pair<int, pair<int, int>>> m_listaMuchiiPonderat;
 
     // DFS - https://www.infoarena.ro/problema/dfs
-    bool m_dfsViz[nMax] = {};
+    static constexpr int dfsMax = 1;
+    bool m_dfsViz[dfsMax] = {};
 
     // BFS - https://www.infoarena.ro/problema/bfs
-    int m_bfsDist[nMax] = {};
+    static constexpr int bfsMax = 1;
+    int m_bfsDist[bfsMax] = {};
     queue<int> m_bfsQueue;
 
     // CTC - https://www.infoarena.ro/problema/ctc
-    int m_ctcId[nMax] = {}, m_ctcLow[nMax] = {}, m_ctcUltId = 0;
-    bool m_ctcPeStiva[nMax] = {};
+    static constexpr int ctcMax = 1;
+    int m_ctcId[ctcMax] = {}, m_ctcLow[ctcMax] = {}, m_ctcUltId = 0;
+    bool m_ctcPeStiva[ctcMax] = {};
     list<list<int>> m_ctc;
     stack<int> m_ctcStack;
 
     // Componente biconexe - https://www.infoarena.ro/problema/biconex
+    static constexpr int biconexMax = 1;
     list<list<int>> m_biconexComps;
     stack<int> m_biconexStack;
-    int m_biconexLow[nMax] = {};
+    int m_biconexLow[biconexMax] = {};
 
     // Muchii critice - https://leetcode.com/problems/critical-connections-in-a-network/
+    static constexpr int criticeMax = 1;
     map<pair<int, int>, bool> m_criticeToRemove;
     vector<vector<int>> m_critice;
-    int m_criticeLow[nMax] = {}; // Id-ul nodului minim in care te poti intoarce din nodul i
+    int m_criticeLow[criticeMax] = {}; // Id-ul nodului minim in care te poti intoarce din nodul i
 
     // Arbore partial de cost minim - https://www.infoarena.ro/problema/apm
     int m_apcmCost = 0;
     vector<pair<int, int>> m_apcmResult;
 
     // Bellman-Ford - https://infoarena.ro/problema/bellmanford
-    vector<int> m_bellmanDist = vector<int>(nMax, INT_MAX);
-    int m_bellmanPuneriInCoada[nMax] = {}, m_bellmanInQueue[nMax] = {};
+    static constexpr int bellmanMax = 1;
+    vector<int> m_bellmanDist = vector<int>(bellmanMax, INT_MAX);
+    int m_bellmanPuneriInCoada[bellmanMax] = {}, m_bellmanInQueue[bellmanMax] = {};
     queue<int> m_bellmanQueue;
     bool m_bellmanCircuitCostNegativ = false;
 
     // Dijkstra - https://infoarena.ro/problema/dijkstra
-    vector<int> m_dijkstraDist = vector<int>(nMax, INT_MAX);
+    static constexpr int dijkstraMax = 1;
+    vector<int> m_dijkstraDist = vector<int>(dijkstraMax, INT_MAX);
     set<pair<int, int>> m_dijkstraMinHeap; // "min".. doar e un ordered set (crescator)
 
     // Diametru arbore - https://www.infoarena.ro/problema/darb
-    bool m_diametruViz[nMax] = {};
+    static constexpr int diametruVizMax = 1;
+    bool m_diametruViz[diametruVizMax] = {};
     int m_diametruNodMax = 0, m_diametruDistMax = 0;
 
     // RoyFloyd - https://www.infoarena.ro/problema/royfloyd
-    int m_royFloydDists[105][105] = {};
+    static constexpr int royFloydMax = 1;
+    int m_royFloydDists[royFloydMax][royFloydMax] = {};
 
     // Flux maxim - https://infoarena.ro/problema/maxflow
-    int m_fluxMaximCapacitate[1005][1005] = {}, m_fluxMaximFlux[1005][1005] = {},
-            m_fluxMaximParinti[1005] = {};
+    static constexpr int fluxMaximMax = 1;
+    int m_fluxMaximCapacitate[fluxMaximMax][fluxMaximMax] = {}, m_fluxMaximFlux[fluxMaximMax][fluxMaximMax] = {},
+            m_fluxMaximParinti[fluxMaximMax] = {};
     queue<int> m_fluxMaximQueue;
+
+    // Ciclu hamiltonian de cost minim - https://www.infoarena.ro/problema/hamilton
+    static const int hamiltonMinimMax = 18;
+    vector<pair<int, int>> m_hamiltonListaAd[hamiltonMinimMax];
+    int m_hamiltonMinimDP[1 << hamiltonMinimMax][hamiltonMinimMax] = {};
 
 
     // ---------------- Functii private ----------------
@@ -629,6 +644,75 @@ public:
 
         return fluxMaximTotal;
     }
+
+    void citesteInputCicluHamiltonian(ifstream &in) {
+        // Citire aproape identica cu una standard prin lista de adiacenta, numai ca in loc sa spuna
+        // vecinii ce pleaca din x, spune vecinii ce ajung in x (asta ne intereseaza in algoritm)
+        for (int i = 0; i < m_m; i++) {
+            int x, y, c;
+            in >> x >> y >> c;
+            m_hamiltonListaAd[y].push_back({x, c});
+            //                ^ y in loc de x-ul standard
+        }
+    }
+
+    int orientatCostMinimCicluHamiltonian() {
+        // Initializam costurile minime cu INFINIT
+        for (int k = 0; k < 1 << hamiltonMinimMax; k++) {
+            for (int i = 0; i < m_n; i++) {
+                m_hamiltonMinimDP[k][i] = INF;
+            }
+        }
+
+        // Costul minim pe un lant format din nodul 0 (bitul 0 e setat => 1, prima coordonata) si se termina
+        // in 0 (a doua coordonata) este 0 -- de aici plecam cu calculul costurilor
+        m_hamiltonMinimDP[1][0] = 0;
+
+        for (int k = 0; k < 1 << m_n; k++) {
+            // ^ fiecare combinatie de n noduri (bitul i e 1 => nodul i face parte din lant)
+
+            for (int i = 0; i < m_n; i++) {
+                // ^ nodul pe care vrem sa il adaugam in lant
+
+                if (k & (1 << i)) {
+                    // ^ e nodul i in combinatia de noduri pe care o verificam acum?
+
+                    for (auto &pairJ: m_hamiltonListaAd[i]) {
+                        int j = pairJ.first, c = pairJ.second;
+                        // ^ cautam toate nodurile din care poti ajunge in i (lista de adiacenta nu e standard, ne
+                        // spune nodurile ce ajung in x, nu cele ce pleaca din x)
+
+                        if (k & (1 << j)) {
+                            // ^ e nodul j in combinatia de noduri pe care o verificam acum?
+
+                            // Daca da, actualizeaza costul minim pe care il poti obtine folosind nodurile k si care
+                            // se termina in nodul i: compara [vechea valoare] cu [costul minim al lantului curent,
+                            // excluzand nodul i, ce se termina in j + distanta de la j la i]
+                            //
+                            // Valoarea precedenta sigur a fost calculata (avand un k mai mic, din moment ce excludem
+                            // un bit).
+                            m_hamiltonMinimDP[k][i] = min(
+                                    m_hamiltonMinimDP[k][i],
+                                    m_hamiltonMinimDP[k & ~(1 << i)][j] + c
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        // Acum avem toate lanturile de lungime n ce se termina in nodul 1, 2, .., n (daca exista).
+
+        // Pentru rezultatul final, cautam minimul costurilor pentru lanturile ce se termina in noduri
+        // ce au arc care duce catre nodul de start (ales de mine ca fiind 0 - oricare ar fi fost la fel de bun).
+        int res = INF;
+        for (auto &pair0: m_hamiltonListaAd[0]) {
+            int i = pair0.first, c = pair0.second;
+            res = min(res, m_hamiltonMinimDP[((1 << m_n) - 1)][i] + c);
+        }
+
+        return (res != INF) ? res : -1;
+    }
 };
 
 int main() {
@@ -637,18 +721,19 @@ int main() {
     cin.tie(nullptr);
 
     // I/O
-    ifstream in("maxflow.in");
-    ofstream out("maxflow.out");
+    ifstream in("hamilton.in");
+    ofstream out("hamilton.out");
 
     int n, m;
     in >> n >> m;
 
     Graf g(n, m);
-    g.citesteInputFluxMaxim(in);
+    g.citesteInputCicluHamiltonian(in);
     in.close();
 
-    int fluxMaxim = g.orientatFluxMaxim();
-    out << fluxMaxim;
+    int costMinim = g.orientatCostMinimCicluHamiltonian();
+    if (costMinim < 0) out << "Nu exista solutie";
+    else out << costMinim;
 
     out.close();
     return 0;
