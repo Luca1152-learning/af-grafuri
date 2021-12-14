@@ -4,3 +4,5 @@ project(Grafuri)
 set(CMAKE_CXX_STANDARD 14)
 
 add_executable(Grafuri main.cpp)
+
+set_target_properties(Grafuri PROPERTIES LINK_FLAGS -Wl,-stack_size,10000000)
