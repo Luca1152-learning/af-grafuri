@@ -10,33 +10,26 @@ void Graf::ponderatCitesteListaMuchii(ifstream &in) {
     }
 }
 
-void Graf::dfs(int k) {
-    // Redimensioneaza
-    m_dfsViz.resize(m_n + 1, 0);
+auto Graf::bfs(int start) {
+    // Declara
+    queue<int> q;
+    vector<int> dist(m_n + 1, 0);
 
-    dfsRecursive(k);
-}
+    q.push(start);
+    dist[start] = 1;
 
-
-const auto &Graf::bfs(int start) {
-    // Redimensioneaza
-    m_bfsDist.resize(m_n + 1, 0);
-
-    m_bfsQueue.push(start);
-    m_bfsDist[start] = 1;
-
-    while (!m_bfsQueue.empty()) {
-        int curr = m_bfsQueue.front();
-        m_bfsQueue.pop();
+    while (!q.empty()) {
+        int curr = q.front();
+        q.pop();
 
         for (auto i: m_listaAd[curr]) {
-            if (m_bfsDist[i] == 0) {
-                m_bfsDist[i] = m_bfsDist[curr] + 1;
-                m_bfsQueue.push(i);
+            if (dist[i] == 0) {
+                dist[i] = dist[curr] + 1;
+                q.push(i);
             }
         }
     }
-    return m_bfsDist;
+    return dist;
 }
 
 bool Graf::potiConstruiGraf(vector<int> grade) {
@@ -58,7 +51,11 @@ bool Graf::potiConstruiGraf(vector<int> grade) {
     return true;
 }
 
-void Graf::construiesteApcm() {
+pair<int, vector<pair<int, int>>> Graf::apcm() {
+    // Declara
+    int cost = 0;
+    vector<pair<int, int>> res;
+
     // Algoritmul lui Kruskal: luam muchiile cu cel mai mic cost, cat timp nu
     // se creeaza cicluri.
     sort(m_listaMuchiiPonderat.begin(), m_listaMuchiiPonderat.end());
@@ -74,18 +71,12 @@ void Graf::construiesteApcm() {
             ds.uneste(x, y);
 
             // Adauga la rezultat muchia gasita
-            m_apcmCost += c;
-            m_apcmResult.push_back({x, y});
+            cost += c;
+            res.push_back({x, y});
         }
     }
-}
 
-const auto &Graf::getApcmResult() {
-    return m_apcmResult;
-}
-
-auto Graf::getApcmCost() {
-    return m_apcmCost;
+    return {cost, res};
 }
 
 void Graf::neorientatCitesteListaMuchii(ifstream &in) {
@@ -112,55 +103,62 @@ void Graf::neorientatCitesteListaAdiacenta(ifstream &in) {
     }
 }
 
-int Graf::neorientatNrCompConexe() {
+int Graf::nrCompConexe() {
+    vector<int> viz(m_n + 1, 0);
+
     int nrComp = 0;
     for (int i = 1; i <= m_n; i++) {
-        if (!m_dfsViz[i]) {
+        if (!viz[i]) {
             nrComp++;
-            dfsRecursive(i);
+            nrCompConexeDfs(i, viz);
         }
     }
     return nrComp;
 }
 
-const auto &Graf::neorientatBiconexe() {
+auto Graf::biconexe() {
     // Redimensioneaza
-    m_biconexLow.resize(m_n + 1, 0);
+    list<list<int>> comps;
+    stack<int> st;
+    vector<int> low(m_n + 1, 0);
 
     for (int i = 1; i <= m_n; i++) {
-        if (!m_biconexLow[i]) {
-            neorientatBiconexDfs(i, -1, 1);
+        if (!low[i]) {
+            biconexDfs(i, -1, 1, comps, st, low);
         }
     }
-    return m_biconexComps;
+    return comps;
 }
 
-const auto &Graf::neorientatMuchiiCritice() {
-    // Redimensioneaza
-    m_criticeLow.resize(m_n + 1, 0);
+auto Graf::muchiiCritice() {
+    // Declara
+    map<pair<int, int>, bool> toRemove;
+    vector<vector<int>> critice;
+    vector<int> low(m_n + 1, 0); // Id-ul nodului minim in care te poti intoarce din nodul i
 
-    neorientatMuchiiCriticeDfs(0, -1, 1);
+    muchiiCriticeDfs(0, -1, 1, toRemove, critice, low);
 
     // In rezultat, punem muchiile ce nu au fost marcate ca trebuind sa fie sterse
     for (auto &e: m_listaMuchii) {
-        if (!m_criticeToRemove[{e[0], e[1]}]) {
-            m_critice.push_back(e);
+        if (!toRemove[{e[0], e[1]}]) {
+            critice.push_back(e);
         }
     }
 
-    return m_critice;
+    return critice;
 }
 
 int Graf::diametru() {
-    // Redimensioneaza
-    m_diametruViz.resize(m_n + 1, false);
+    // Declara
+    int nodMax = 0, distMax = 0;
+    vector<bool> viz(m_n + 1, false);
 
-    diametruDFS(1, 1);
-    m_diametruDistMax = 0;
-    fill(m_diametruViz.begin(), m_diametruViz.end(), 0);
-    diametruDFS(m_diametruNodMax, 1);
+    diametruDfs(1, 1, viz, nodMax, distMax);
+    distMax = 0;
+    fill(viz.begin(), viz.end(), 0);
+    diametruDfs(nodMax, 1, viz, nodMax, distMax);
 
-    return m_diametruDistMax;
+    return distMax;
 }
 
 void Graf::orientatCitesteListaAdiacenta(ifstream &in) {
@@ -204,44 +202,46 @@ void Graf::orientatPonderatCitesteMatricePonderi(ifstream &in) {
     }
 }
 
-const auto &Graf::orientatCtc() {
-    // Redimensioneaza
-    m_ctcId.resize(m_n + 1, 0);
-    m_ctcLow.resize(m_n + 1, 0);
-    m_ctcPeStiva.resize(m_n + 1, false);
+auto Graf::ctc() {
+    // Declara
+    int ultId = 0;
+    vector<int> id(m_n + 1, 0), low(m_n + 1, 0);
+    vector<bool> peStiva(m_n + 1, false);
+    stack<int> st;
+    list<list<int>> ctc;
 
     // Algoritmul lui Tarjan
     for (int i = 1; i <= m_n; i++) {
         // Nu am explorat nodul pana acum (neavand vreun id)
-        if (m_ctcId[i] == 0) {
-            orientatCtcDfs(i);
+        if (id[i] == 0) {
+            ctcDfs(i, ultId, id, low, peStiva, st, ctc);
         }
     }
-    return m_ctc;
+    return ctc;
 }
 
-void Graf::orientatRuleazaBellmanFord(int start) {
-    // Redimensioneaza
-    m_bellmanDist.resize(m_n + 1, INF);
-    m_bellmanPuneriInCoada.resize(m_n + 1, 0);
-    m_bellmanInQueue.resize(m_n + 1, 0);
+pair<bool, vector<int>> Graf::bellmanFord(int start) {
+    // Declara
+    vector<int> dist(m_n + 1, INF), puneriInCoada(m_n + 1, 0), inCoada(m_n + 1, 0);
+    queue<int> q;
+    bool circuitCostNegativ = false;
 
     // Gaseste graful de costuri minime, plecand din start la celelalte n-1 noduri.
     // Putem avea circuit de cost negativ -> va fi detectat.
 
     // Incepem cu optimizarile plecand din nodul de start
-    m_bellmanQueue.push(start);
-    m_bellmanDist[start] = 0;
-    m_bellmanInQueue[start] = true;
-    m_bellmanPuneriInCoada[start] = 1;
+    q.push(start);
+    dist[start] = 0;
+    inCoada[start] = true;
+    puneriInCoada[start] = 1;
 
     // Ne oprim cand nu mai avem nimic de optimizat / am gasit un circuit cu cost negativ
-    while (!m_bellmanQueue.empty() && !m_bellmanCircuitCostNegativ) {
-        int x = m_bellmanQueue.front();
-        m_bellmanQueue.pop();
+    while (!q.empty() && !circuitCostNegativ) {
+        int x = q.front();
+        q.pop();
 
         // Marcam nodul curent ca ne mai fiind in queue
-        m_bellmanInQueue[x] = false;
+        inCoada[x] = false;
 
         // Luam toate arcele la rand si incercam sa optimizam distante, folosindu-le
         for (auto &e: m_ponderatListaAd[x]) {
@@ -249,75 +249,71 @@ void Graf::orientatRuleazaBellmanFord(int start) {
 
             // Am gasit un arc (de la x la y) ce optimizeaza costul lui y (= obtinem
             // o distanta mai mica din start->y daca mergem prin x)
-            if (m_bellmanDist[y] > m_bellmanDist[x] + c) {
-                m_bellmanDist[y] = m_bellmanDist[x] + c;
+            if (dist[y] > dist[x] + c) {
+                dist[y] = dist[x] + c;
 
                 // Daca y nu e deja in coada, pune-l (facem verificarea ca sa nu
                 // il adaugam de mai multe ori in coada), pentru ca, optimizand
                 // distanta pana la el, putem optimiza distante si plecand din el.
-                if (!m_bellmanInQueue[y]) {
-                    m_bellmanQueue.push(y);
-                    m_bellmanInQueue[y] = true;
+                if (!inCoada[y]) {
+                    q.push(y);
+                    inCoada[y] = true;
 
                     // Numara de cate ori au fost puse in coada nodurile. Daca un nod
                     // a fost pus de >= n ori (=> n optimizari), inseamna ca am gasit
                     // un circuit de cost negativ.
-                    m_bellmanPuneriInCoada[y]++;
-                    if (m_bellmanPuneriInCoada[y] >= m_n) {
-                        m_bellmanCircuitCostNegativ = true;
+                    puneriInCoada[y]++;
+                    if (puneriInCoada[y] >= m_n) {
+                        circuitCostNegativ = true;
                     }
                 }
             }
         }
     }
+
+    return {circuitCostNegativ, dist};
 }
 
-bool Graf::circuitNegativBellmanFord() {
-    return m_bellmanCircuitCostNegativ;
-}
-
-const auto &Graf::getBellmanFordDists() {
-    return m_bellmanDist;
-}
-
-const auto &Graf::orientatRuleazaDijkstra(int start) {
-    // Redimensioneaza
-    m_dijkstraDist.resize(m_n + 1, INF);
+auto Graf::dijkstra(int start) {
+    // Declara
+    vector<int> dist(m_n + 1, INF);
+    set<pair<int, int>> minHeap; // "min".. doar e un ordered set (crescator)
 
     // Incepem algoritmul din nodul de start
-    m_dijkstraDist[start] = 0;
+    dist[start] = 0;
     // Punem in set perechea {0, [nod start]}, 0 fiind distanta de la start pana la el insusi
-    m_dijkstraMinHeap.insert({0, start});
+    minHeap.insert({0, start});
 
-    while (!m_dijkstraMinHeap.empty()) {
+    while (!minHeap.empty()) {
         // Procesam nodul de la distanta cea mai mica fata de start
-        auto x = m_dijkstraMinHeap.begin()->second;
-        m_dijkstraMinHeap.erase(m_dijkstraMinHeap.begin());
+        auto x = minHeap.begin()->second;
+        minHeap.erase(minHeap.begin());
 
         for (auto &e: m_ponderatListaAd[x]) {
             auto y = e.first, c = e.second;
 
             // Obtinem un drum mai scurt (fata de cel gasit) daca trecem prin x
-            if (m_dijkstraDist[y] > m_dijkstraDist[x] + c) {
+            if (dist[y] > dist[x] + c) {
                 // Nodul y e deja marcat ca trebuind sa fie procesat => il scoatem din set, ca sa il readaugam
                 // cu noua distanta, mai mica (ca sa nu pierdem timp incercand sa-l optimizam cu distanta veche
                 // mai tarziu) -- 90p->100p
-                if (m_dijkstraMinHeap.count({m_dijkstraDist[y], y}) > 0) {
-                    m_dijkstraMinHeap.erase(m_dijkstraMinHeap.find({m_dijkstraDist[y], y}));
+                if (minHeap.count({dist[y], y}) > 0) {
+                    minHeap.erase(minHeap.find({dist[y], y}));
                 }
 
                 // Actualizam distanta lui y si il punem la procesat
-                m_dijkstraDist[y] = m_dijkstraDist[x] + c;
-                m_dijkstraMinHeap.insert({m_dijkstraDist[y], y});
+                dist[y] = dist[x] + c;
+                minHeap.insert({dist[y], y});
             }
         }
     }
 
-    return m_dijkstraDist;
+    return dist;
 }
 
-void Graf::orientatRoyFloyd() {
-    orientatRoyFloydSetup();
+auto Graf::royFloyd() {
+    vector<vector<int>> dists;
+    royFloydSetup(dists);
 
     // Nodul k = nodul pe care incercam sa il integram in drumul de la i la j
     for (int k = 1; k <= m_n; k++) {
@@ -325,46 +321,43 @@ void Graf::orientatRoyFloyd() {
         // (i -> ... -> k -> ... -> j)
         for (int i = 1; i <= m_n; i++) {
             for (int j = 1; j <= m_n; j++) {
-                if (m_royFloydDists[i][k] + m_royFloydDists[k][j] < m_royFloydDists[i][j]) {
-                    m_royFloydDists[i][j] = m_royFloydDists[i][k] + m_royFloydDists[k][j];
+                if (dists[i][k] + dists[k][j] < dists[i][j]) {
+                    dists[i][j] = dists[i][k] + dists[k][j];
                 }
             }
         }
     }
+
+    return dists;
 }
 
-const auto &Graf::orientatRoyFloydGetDists() {
-    return m_royFloydDists;
-}
-
-void Graf::citesteInputFluxMaxim(ifstream &in) {
-    // Redimensioneaza
-    m_listaAd.clear();
-    m_listaAd.resize(m_n + 1);
-    m_fluxMaximCapacitate.clear();
-    m_fluxMaximCapacitate.resize(m_n + 1);
+pair<vector<vector<int>>, vector<vector<int>>> Graf::citesteInputFluxMaxim(ifstream &in) {
+    vector<vector<int>> capacitate(m_n + 1), flux(m_n + 1);
 
     for (int i = 0; i < m_m; i++) {
         // Redimensioneaza
-        m_fluxMaximCapacitate[i].resize(m_n + 1);
+        capacitate[i].resize(m_n + 1);
 
         int x, y, c;
         in >> x >> y >> c;
-        m_fluxMaximCapacitate[x][y] = c;
+        capacitate[x][y] = c;
         m_listaAd[x].push_back(y);
         m_listaAd[y].push_back(x);
     }
 }
 
-int Graf::orientatFluxMaximBFS(int start) {
-    std::fill(m_fluxMaximParinti.begin(), m_fluxMaximParinti.end(), 0);
+int Graf::fluxMaximBfs(
+        int start, vector<vector<int>> &capacitate, vector<vector<int>> &flux,
+        vector<int> &parinti, queue<int> &q
+) {
+    std::fill(parinti.begin(), parinti.end(), 0);
 
-    m_fluxMaximQueue.push(start);
-    m_fluxMaximParinti[start] = -1;
+    q.push(start);
+    parinti[start] = -1;
 
-    while (!m_fluxMaximQueue.empty()) {
-        int x = m_fluxMaximQueue.front();
-        m_fluxMaximQueue.pop();
+    while (!q.empty()) {
+        int x = q.front();
+        q.pop();
 
         // Din moment ce am facut graful unul neorientat (pentru a avea acces la vecinii nodului destinatie),
         // am putea sa ne intoarcem din nodul final in alte noduri inca nevizitate, dar nu vrem asta
@@ -375,40 +368,41 @@ int Graf::orientatFluxMaximBFS(int start) {
         for (auto &y: m_listaAd[x]) {
             // Daca nu am vizitat nodul y in bfs-ul curent si daca inca mai putem pompa
             // flux prin lantul x-y, viziteaza-l
-            if (!m_fluxMaximParinti[y] && m_fluxMaximCapacitate[x][y] - m_fluxMaximFlux[x][y] > 0) {
-                m_fluxMaximQueue.push(y);
-                m_fluxMaximParinti[y] = x;
+            if (!parinti[y] && capacitate[x][y] - flux[x][y] > 0) {
+                q.push(y);
+                parinti[y] = x;
             }
         }
     }
 
     // Returnam daca am ajuns la destinatie cu parcurgerea curenta
-    return m_fluxMaximParinti[m_n];
+    return parinti[m_n];
 }
 
-int Graf::orientatFluxMaxim() {
-    // Redimensioneaza
-    m_fluxMaximParinti.resize(m_n + 1, 0);
+int Graf::fluxMaxim(vector<vector<int>> &capacitate, vector<vector<int>> &flux) {
+    // Declara
+    vector<int> parinti(m_n + 1, 0);
+    queue<int> q;
 
     // Algoritmul Edmonds-Karp
 
     int fluxMaximTotal = 0;
 
-    while (orientatFluxMaximBFS()) {
+    while (fluxMaximBfs(1, capacitate, flux, parinti, q)) {
         // Am creat arborele bfs -> ne intoarcem pe fiecare ruta posibila, folosindu-ne de vecinii
         // nodului final
         for (auto &x: m_listaAd[m_n]) {
-            if (!m_fluxMaximParinti[x] || m_fluxMaximCapacitate[x][m_n] - m_fluxMaximFlux[x][m_n] == 0) {
+            if (!parinti[x] || capacitate[x][m_n] - flux[x][m_n] == 0) {
                 continue;
             }
 
-            m_fluxMaximParinti[m_n] = x;
+            parinti[m_n] = x;
 
             // Gaseste fluxul minim ce poate fi pompat pe lantul gasit de bfs
             int fluxMinimLant = INF, curr = m_n;
-            while (m_fluxMaximParinti[curr] != -1) {
-                int prev = m_fluxMaximParinti[curr];
-                fluxMinimLant = min(fluxMinimLant, m_fluxMaximCapacitate[prev][curr] - m_fluxMaximFlux[prev][curr]);
+            while (parinti[curr] != -1) {
+                int prev = parinti[curr];
+                fluxMinimLant = min(fluxMinimLant, capacitate[prev][curr] - flux[prev][curr]);
                 curr = prev;
             }
             if (fluxMinimLant == 0) {
@@ -417,10 +411,10 @@ int Graf::orientatFluxMaxim() {
 
             // Actualizeaza fluxurile
             curr = m_n;
-            while (m_fluxMaximParinti[curr] != -1) {
-                int prev = m_fluxMaximParinti[curr];
-                m_fluxMaximFlux[prev][curr] += fluxMinimLant;
-                m_fluxMaximFlux[curr][prev] -= fluxMinimLant;
+            while (parinti[curr] != -1) {
+                int prev = parinti[curr];
+                flux[prev][curr] += fluxMinimLant;
+                flux[curr][prev] -= fluxMinimLant;
                 curr = prev;
             }
 
@@ -446,20 +440,19 @@ void Graf::citesteInputCicluHamiltonian(ifstream &in) {
     }
 }
 
-int Graf::orientatCostMinimCicluHamiltonian() {
-    // Redimensioneaza
-    m_hamiltonMinimDP.clear();
-    m_hamiltonMinimDP.resize(1 << m_n);
+int Graf::hamiltonCostMinim() {
+    // Declara
+    vector<vector<int>> dp(1 << m_n);
 
     // Initializam costurile minime cu INFINIT
     for (int k = 0; k < 1 << m_n; k++) {
         // Redimensioneaza
-        m_hamiltonMinimDP[k].resize(m_n + 1, INF);
+        dp[k].resize(m_n + 1, INF);
     }
 
     // Costul minim pe un lant format din nodul 0 (bitul 0 e setat => 1, prima coordonata) si se termina
     // in 0 (a doua coordonata) este 0 -- de aici plecam cu calculul costurilor
-    m_hamiltonMinimDP[1][0] = 0;
+    dp[1][0] = 0;
 
     for (int k = 0; k < 1 << m_n; k++) {
         // ^ fiecare combinatie de n noduri (bitul i e 1 => nodul i face parte din lant)
@@ -484,10 +477,7 @@ int Graf::orientatCostMinimCicluHamiltonian() {
                         //
                         // Valoarea precedenta sigur a fost calculata (avand un k mai mic, din moment ce excludem
                         // un bit).
-                        m_hamiltonMinimDP[k][i] = min(
-                                m_hamiltonMinimDP[k][i],
-                                m_hamiltonMinimDP[k & ~(1 << i)][j] + c
-                        );
+                        dp[k][i] = min(dp[k][i], dp[k & ~(1 << i)][j] + c);
                     }
                 }
             }
@@ -501,7 +491,7 @@ int Graf::orientatCostMinimCicluHamiltonian() {
     int res = INF;
     for (auto &pair0: m_hamiltonListaAd[0]) {
         int i = pair0.first, c = pair0.second;
-        res = min(res, m_hamiltonMinimDP[((1 << m_n) - 1)][i] + c);
+        res = min(res, dp[((1 << m_n) - 1)][i] + c);
     }
 
     return (res != INF) ? res : -1;
@@ -520,22 +510,22 @@ void Graf::neorientatCitesteMultigrafContorizat(ifstream &in) {
     }
 }
 
-bool Graf::eCicluEuler() {
-    // Redimensioneaza
-    m_cicluEulerGrade.resize(m_n + 1, 0);
+bool Graf::areCicluEulerian() {
+    // Declara
+    vector<int> grade(m_n + 1, 0);
 
     // Putem gasi un ciclu eulerian intr-un graf daca fiecare nod are grad par
 
     // Numaram gradele fiecarui noid (din lista de adiacenta a multigrafului)
     for (int x = 1; x <= m_n; x++) {
         for (auto &y: m_multigrafListaAd[x]) {
-            m_cicluEulerGrade[x]++;
+            grade[x]++;
         }
     }
 
     // Verificam ca gradele sunt numere pare
     for (int x = 1; x <= m_n; x++) {
-        if (m_cicluEulerGrade[x] % 2 == 1) {
+        if (grade[x] % 2 == 1) {
             return false;
         }
     }
@@ -544,19 +534,20 @@ bool Graf::eCicluEuler() {
     return true;
 }
 
-const auto &Graf::gasesteCicluEuler() {
-    // Redimensioneaza
-    m_cicluEulerFolMuchie.resize(m_m + 1, false);
+auto Graf::cicluEulerian() {
+    // Declara
+    vector<int> sol, st;
+    vector<bool> folMuchie(m_m + 1, false);
 
-    // Facem un "dfsRecursive iterativ" - daca ar fi recursiv, am avea stack overflow pentru
-    // grafuri mari. La "dfsRecursive"-ul asta, nu vrem sa se repete muchiile (si nu nodurile).
+    // Facem un "nrCompConexeDfs iterativ" - daca ar fi recursiv, am avea stack overflow pentru
+    // grafuri mari. La "nrCompConexeDfs"-ul asta, nu vrem sa se repete muchiile (si nu nodurile).
 
     // Cautam un ciclu eulerian plecand din nodul 1
-    m_cicluEulerStack.push_back(1);
+    st.push_back(1);
 
-    // Procesam nodul curent la care s-a ajuns in parcurgerea dfsRecursive
-    while (!m_cicluEulerStack.empty()) {
-        int x = m_cicluEulerStack.back();
+    // Procesam nodul curent la care s-a ajuns in parcurgerea nrCompConexeDfs
+    while (!st.empty()) {
+        int x = st.back();
 
         // Cautam o muchie ce pleaca din x si care nu a fost folosita
         bool gasitMuchie = false;
@@ -565,170 +556,182 @@ const auto &Graf::gasesteCicluEuler() {
             auto &pairY = m_multigrafListaAd[x].back();
             m_multigrafListaAd[x].pop_back();
             y = pairY.first, i = pairY.second;
-            if (!m_cicluEulerFolMuchie[i]) {
+            if (!folMuchie[i]) {
                 gasitMuchie = true;
             }
         }
 
         if (gasitMuchie) {
-            // Am gasit o muchie => continuam cu dfsRecursive-ul cu nodul y
-            m_cicluEulerStack.push_back(y);
-            m_cicluEulerFolMuchie[i] = true;
+            // Am gasit o muchie => continuam cu nrCompConexeDfs-ul cu nodul y
+            st.push_back(y);
+            folMuchie[i] = true;
         } else {
             // Nu am gasit nicio muchie ce pleaca din x si care nu a fost folosita =>
             // => nu mai exista cicluri ce pleaca din x si ajung in x
-            m_cicluEulerSol.push_back(x);
-            m_cicluEulerStack.pop_back();
+            sol.push_back(x);
+            st.pop_back();
         }
     }
 
-    return m_cicluEulerSol;
+    return sol;
 }
 
-void Graf::dfsRecursive(int k) {
-    m_dfsViz[k] = true;
+void Graf::nrCompConexeDfs(int k, vector<int> &viz) {
+    viz[k] = true;
 
     for (auto x: m_listaAd[k]) {
-        if (!m_dfsViz[x]) {
-            dfsRecursive(x);
+        if (!viz[x]) {
+            nrCompConexeDfs(x, viz);
         }
     }
 }
 
-void Graf::orientatCtcDfs(int x) {
-    m_ctcStack.push(x);
-    m_ctcPeStiva[x] = true;
-    m_ctcId[x] = m_ctcLow[x] = ++m_ctcUltId;
+void Graf::ctcDfs(
+        int x, int &ultId, vector<int> &id, vector<int> &low, vector<bool> &peStiva,
+        stack<int> &st, list<list<int>> &ctc
+) {
+    st.push(x);
+    peStiva[x] = true;
+    id[x] = low[x] = ++ultId;
 
     for (auto y: m_listaAd[x]) {
         // Nu am explorat nodul pana acum (neavand vreun id)
-        if (m_ctcId[y] == 0) {
-            orientatCtcDfs(y);
+        if (id[y] == 0) {
+            ctcDfs(y, ultId, id, low, peStiva, st, ctc);
         }
 
         // Am intalnit un nod care inca nu a fost atribuit unei componente conexe.
         // Poate nodul curent face parte din viitoarea componenta conexa, a carei (posibila) sursa
         // a fost gasita de y.
-        if (m_ctcPeStiva[y]) {
-            m_ctcLow[x] = min(m_ctcLow[x], m_ctcLow[y]);
+        if (peStiva[y]) {
+            low[x] = min(low[x], low[y]);
         }
     }
 
     // Am ajuns la nodul de start al ctc-ului explorat in prezent
-    if (m_ctcId[x] == m_ctcLow[x]) {
+    if (id[x] == low[x]) {
         list<int> compCurr;
         while (true) {
-            auto y = m_ctcStack.top();
-            m_ctcStack.pop();
+            auto y = st.top();
+            st.pop();
 
-            m_ctcPeStiva[y] = false;
+            peStiva[y] = false;
             compCurr.push_back(y);
 
             if (y == x) break;
         }
-        m_ctc.push_back(compCurr);
+        ctc.push_back(compCurr);
     }
 }
 
-void Graf::neorientatBiconexAdd(int x, int y) {
+void Graf::biconexAdd(
+        int x, int y, list<list<int>> &comps, stack<int> &st
+) {
     // Creeaza o noua componenta pentru afisare
     list<int> comp;
 
     // Adauga in componenta toate nodurile pana la y, inclusiv y
-    while (m_biconexStack.top() != y) {
-        comp.push_back(m_biconexStack.top());
-        m_biconexStack.pop();
+    while (st.top() != y) {
+        comp.push_back(st.top());
+        st.pop();
     }
     comp.push_back(y);
-    m_biconexStack.pop();
+    st.pop();
 
     // Adauga in componenta si pe x, separat (in caz ca e un gap in stack intre y si x)
     // ^ gap-ul poate aparea daca intalnim mai multe componente biconexe ce se intorc in acelasi nod
     comp.push_back(x);
 
-    m_biconexComps.push_back(comp);
+    comps.push_back(comp);
 }
 
-void Graf::neorientatBiconexDfs(int x, int prev, int id) {
-    // Initializam low-ul (nodul cel mai de sus din parcurgerea dfsRecursive in care putem ajunge)
+void Graf::biconexDfs(
+        int x, int prev, int id, list<list<int>> &comps, stack<int> &st,
+        vector<int> &low
+) {
+    // Initializam low-ul (nodul cel mai de sus din parcurgerea nrCompConexeDfs in care putem ajunge)
     // si punem nodul curent pe stack
-    m_biconexLow[x] = id;
-    m_biconexStack.push(x);
+    low[x] = id;
+    st.push(x);
 
     for (auto y: m_listaAd[x]) {
         // Ignoram cazul in care ne intoarcem din nodul in care am plecat
         if (y == prev) continue;
 
         // Nodul y nu a fost vizitat => viziteaza-l
-        if (!m_biconexLow[y]) {
+        if (!low[y]) {
             // Viziteaza-l si actualizeaza low
-            neorientatBiconexDfs(y, x, id + 1);
-            m_biconexLow[x] = min(m_biconexLow[x], m_biconexLow[y]);
+            biconexDfs(y, x, id + 1, comps, st, low);
+            low[x] = min(low[x], low[y]);
 
             // Am ajuns la originea ciclului / am dat peste un nod de mai jos din parcurgerea
-            // dfsRecursive la care nu mai putem ajunge altfel (=> componenta biconexa)
-            if (m_biconexLow[y] >= id) {
-                neorientatBiconexAdd(x, y);
+            // nrCompConexeDfs la care nu mai putem ajunge altfel (=> componenta biconexa)
+            if (low[y] >= id) {
+                biconexAdd(x, y, comps, st);
             }
         }
             // Nodul y a fost vizitat => doar actualizeaza min-ul in caz ca e nevoie,
             // fara sa risti sa afisezi o componenta biconexa de doua ori
         else {
-            m_biconexLow[x] = min(m_biconexLow[x], m_biconexLow[y]);
+            low[x] = min(low[x], low[y]);
         }
     }
 }
 
-void Graf::neorientatMuchiiCriticeDfs(int x, int prev, int id) {
-    m_criticeLow[x] = id;
+void Graf::muchiiCriticeDfs(
+        int x, int prev, int id, map<pair<int, int>, bool> &toRemove,
+        vector<vector<int>> &critice, vector<int> &low
+) {
+    low[x] = id;
 
     for (auto y: m_listaAd[x]) {
         // Nu te intoarce in nodul din care ai plecat
         if (y == prev) continue;
 
-        // Ruleaza dfsRecursive in continuare, cu un id mai mare
-        if (m_criticeLow[y] == 0) neorientatMuchiiCriticeDfs(y, x, id + 1);
+        // Ruleaza nrCompConexeDfs in continuare, cu un id mai mare
+        if (low[y] == 0) muchiiCriticeDfs(y, x, id + 1, toRemove, critice, low);
 
         // Nodul vizitat din cel curent face parte dintr-un ciclu,
         // asa ca trebuie sa excludem muchia x-y
-        if (m_criticeLow[y] < id + 1) {
-            m_criticeToRemove[{x, y}] = m_criticeToRemove[{y, x}] = true;
+        if (low[y] < id + 1) {
+            toRemove[{x, y}] = toRemove[{y, x}] = true;
         }
 
         // Actualizeaza low-ul nodului curent
-        m_criticeLow[x] = min(m_criticeLow[x], m_criticeLow[y]);
+        low[x] = min(low[x], low[y]);
     }
 }
 
-void Graf::diametruDFS(int x, int dist) {
-    if (dist > m_diametruDistMax) {
-        m_diametruDistMax = dist;
-        m_diametruNodMax = x;
+void Graf::diametruDfs(
+        int x, int dist, vector<bool> &viz, int &nodMax, int &distMax
+) {
+    if (dist > distMax) {
+        distMax = dist;
+        nodMax = x;
     }
-    m_diametruViz[x] = 1;
+    viz[x] = 1;
     for (auto &y: m_listaAd[x]) {
-        if (!m_diametruViz[y]) {
-            diametruDFS(y, dist + 1);
+        if (!viz[y]) {
+            diametruDfs(y, dist + 1, viz, nodMax, distMax);
         }
     }
 }
 
-void Graf::orientatRoyFloydSetup() {
+void Graf::royFloydSetup(vector<vector<int>> &dists) {
     // Redimensioneaza
-    m_royFloydDists.clear();
-    m_royFloydDists.resize(m_n + 1);
+    dists.resize(m_n + 1);
 
     for (int i = 1; i <= m_n; i++) {
         // Redimensioneaza
-        m_royFloydDists[i].resize(m_n + 1);
+        dists[i].resize(m_n + 1);
 
         for (int j = 1; j <= m_n; j++) {
             if (i == j) {
-                m_royFloydDists[i][j] = 0;
+                dists[i][j] = 0;
             } else if (m_ponderatMatrice[i][j] == 0) {
-                m_royFloydDists[i][j] = INF;
+                dists[i][j] = INF;
             } else {
-                m_royFloydDists[i][j] = m_ponderatMatrice[i][j];
+                dists[i][j] = m_ponderatMatrice[i][j];
             }
         }
     }

@@ -36,81 +36,54 @@ public:
 
     void neorientatCitesteMultigrafContorizat(ifstream &in);
 
+    pair<vector<vector<int>>, vector<vector<int>>> citesteInputFluxMaxim(ifstream &in);
+
+    void citesteInputCicluHamiltonian(ifstream &in);
+
 
     // dfs - https://www.infoarena.ro/problema/dfs
-    void dfs(int k);
-
-    int neorientatNrCompConexe();
-
+    int nrCompConexe();
 
     // bfs - https://www.infoarena.ro/problema/bfs
-    const auto &bfs(int start);
-
+    auto bfs(int start);
 
     // Havel-Hakimi
     static bool potiConstruiGraf(vector<int> grade);
 
-
     // Arbore partial de cost minim - https://www.infoarena.ro/problema/apm
-    void construiesteApcm();
-
-    const auto &getApcmResult();
-
-    auto getApcmCost();
-
+    pair<int, vector<pair<int, int>>> apcm();
 
     // CTC - https://www.infoarena.ro/problema/ctc
-    const auto &orientatCtc();
-
+    auto ctc();
 
     // Componente biconexe - https://www.infoarena.ro/problema/biconex
-    const auto &neorientatBiconexe();
-
+    auto biconexe();
 
     // Muchii critice - https://leetcode.com/problems/critical-connections-in-a-network/
-    const auto &neorientatMuchiiCritice();
-
+    auto muchiiCritice();
 
     // Diametru arbore - https://www.infoarena.ro/problema/darb
     int diametru();
 
-
     // Bellman-Ford - https://infoarena.ro/problema/bellmanford
-    void orientatRuleazaBellmanFord(int start);
-
-    bool circuitNegativBellmanFord();
-
-    const auto &getBellmanFordDists();
-
+    pair<bool, vector<int>> bellmanFord(int start);
 
     // Dijkstra - https://infoarena.ro/problema/dijkstra
-    const auto &orientatRuleazaDijkstra(int start);
-
+    auto dijkstra(int start);
 
     // RoyFloyd - https://www.infoarena.ro/problema/royfloyd
-    void orientatRoyFloyd();
-
-    const auto &orientatRoyFloydGetDists();
-
+    auto royFloyd();
 
     // Flux maxim - https://infoarena.ro/problema/maxflow
-    void citesteInputFluxMaxim(ifstream &in);
-
-    int orientatFluxMaximBFS(int start = 1);
-
-    int orientatFluxMaxim();
-
+    int fluxMaxim(vector<vector<int>> &capacitate, vector<vector<int>> &flux);
 
     // Ciclu hamiltonian de cost minim - https://www.infoarena.ro/problema/hamilton
-    void citesteInputCicluHamiltonian(ifstream &in);
-
-    int orientatCostMinimCicluHamiltonian();
-
+    int hamiltonCostMinim();
 
     // Ciclu eulerian - https://www.infoarena.ro/problema/ciclueuler
-    bool eCicluEuler();
+    bool areCicluEulerian();
 
-    const auto &gasesteCicluEuler();
+    auto cicluEulerian();
 
 private:
     int m_n = 0, m_m = 0;
@@ -121,96 +94,48 @@ private:
     vector<vector<int>> m_ponderatMatrice;
     vector<vector<int>> m_listaMuchii;
     vector<pair<int, pair<int, int>>> m_listaMuchiiPonderat;
+    vector<vector<pair<int, int>>> m_multigrafListaAd;
+    vector<vector<pair<int, int>>> m_hamiltonListaAd;
 
     // Constante
     static constexpr int INF = ((1 << 30) - 1);
     // 2^30-1 ca sa nu fie overflow daca faci INF + INF
 
-    // dfs - https://www.infoarena.ro/problema/dfs
-    vector<bool> m_dfsViz;
-
-    // bfs - https://www.infoarena.ro/problema/bfs
-    vector<int> m_bfsDist;
-    queue<int> m_bfsQueue;
-
-    // CTC - https://www.infoarena.ro/problema/ctc
-    vector<int> m_ctcId, m_ctcLow;
-    int m_ctcUltId = 0;
-    vector<bool> m_ctcPeStiva;
-    list<list<int>> m_ctc;
-    stack<int> m_ctcStack;
-
-    // Componente biconexe - https://www.infoarena.ro/problema/biconex
-    list<list<int>> m_biconexComps;
-    stack<int> m_biconexStack;
-    vector<int> m_biconexLow;
-
-    // Muchii critice - https://leetcode.com/problems/critical-connections-in-a-network/
-    map<pair<int, int>, bool> m_criticeToRemove;
-    vector<vector<int>> m_critice;
-    vector<int> m_criticeLow; // Id-ul nodului minim in care te poti intoarce din nodul i
-
-    // Arbore partial de cost minim - https://www.infoarena.ro/problema/apm
-    int m_apcmCost = 0;
-    vector<pair<int, int>> m_apcmResult;
-
-    // Bellman-Ford - https://infoarena.ro/problema/bellmanford
-    vector<int> m_bellmanDist, m_bellmanPuneriInCoada, m_bellmanInQueue;
-    queue<int> m_bellmanQueue;
-    bool m_bellmanCircuitCostNegativ = false;
-
-    // Dijkstra - https://infoarena.ro/problema/dijkstra
-    vector<int> m_dijkstraDist;
-    set<pair<int, int>> m_dijkstraMinHeap; // "min".. doar e un ordered set (crescator)
-
-    // Diametru arbore - https://www.infoarena.ro/problema/darb
-    vector<bool> m_diametruViz;
-    int m_diametruNodMax = 0, m_diametruDistMax = 0;
-
-    // RoyFloyd - https://www.infoarena.ro/problema/royfloyd
-    vector<vector<int>> m_royFloydDists;
-
-    // Flux maxim - https://infoarena.ro/problema/maxflow
-    vector<vector<int>> m_fluxMaximCapacitate, m_fluxMaximFlux;
-    vector<int> m_fluxMaximParinti;
-    queue<int> m_fluxMaximQueue;
-
-    // Ciclu hamiltonian de cost minim - https://www.infoarena.ro/problema/hamilton
-    vector<vector<pair<int, int>>> m_hamiltonListaAd;
-    vector<vector<int>> m_hamiltonMinimDP;
-
-    // Ciclu eulerian - https://www.infoarena.ro/problema/ciclueuler
-    vector<vector<pair<int, int>>> m_multigrafListaAd;
-    vector<int> m_cicluEulerSol, m_cicluEulerStack;
-    vector<int> m_cicluEulerGrade;
-    vector<bool> m_cicluEulerFolMuchie;
-
-
     // ---------------- Functii private ----------------
     // dfs - https://www.infoarena.ro/problema/dfs
-    void dfsRecursive(int k);
-
+    void nrCompConexeDfs(int k, vector<int> &viz);
 
     // CTC - https://www.infoarena.ro/problema/ctc
-    void orientatCtcDfs(int x);
-
+    void ctcDfs(
+            int x, int &ultId, vector<int> &id, vector<int> &low, vector<bool> &peStiva,
+            stack<int> &st, list<list<int>> &ctc
+    );
 
     // Componente biconexe - https://www.infoarena.ro/problema/biconex
-    void neorientatBiconexAdd(int x, int y);
+    void biconexAdd(int x, int y, list<list<int>> &comps, stack<int> &st);
 
-    void neorientatBiconexDfs(int x, int prev, int id);
-
+    void biconexDfs(
+            int x, int prev, int id, list<list<int>> &comps, stack<int> &st,
+            vector<int> &low
+    );
 
     // Muchii critice - https://leetcode.com/problems/critical-connections-in-a-network/
-    void neorientatMuchiiCriticeDfs(int x, int prev, int id);
-
+    void muchiiCriticeDfs(
+            int x, int prev, int id, map<pair<int, int>, bool> &toRemove,
+            vector<vector<int>> &critice, vector<int> &low
+    );
 
     // Diametru arbore - https://www.infoarena.ro/problema/darb
-    void diametruDFS(int x, int dist);
-
+    void diametruDfs(int x, int dist, vector<bool> &viz, int &nodMax, int &distMax);
 
     // RoyFloyd - https://www.infoarena.ro/problema/royfloyd
-    void orientatRoyFloydSetup();
+    void royFloydSetup(vector<vector<int>> &dists);
+
+    // Flux maxim - https://infoarena.ro/problema/maxflow
+    int fluxMaximBfs(
+            int start, vector<vector<int>> &capacitate, vector<vector<int>> &flux,
+            vector<int> &parinti, queue<int> &q
+    );
 };
 
 #endif //GRAFURI_GRAF_H
