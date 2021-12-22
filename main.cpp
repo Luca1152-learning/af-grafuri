@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <climits>
 #include <cstring>
+#include "DisjointSet.h"
 
 #define INF ((1 << 30) - 1)
 // 2^30-1 ca sa nu fie overflow daca faci INF + INF
@@ -16,39 +17,6 @@
 const int nMax = 1;
 
 using namespace std;
-
-class DisjointSet {
-private:
-    int m_parinte[nMax] = {}, m_dimensiune[nMax] = {};
-
-public:
-    explicit DisjointSet(int n) {
-        for (int i = 1; i <= n; i++) {
-            m_parinte[i] = i;
-            m_dimensiune[i] = 1;
-        }
-    }
-
-    int cauta(int x) {
-        while (x != m_parinte[x]) {
-            x = m_parinte[x];
-        }
-        return x;
-    }
-
-    void uneste(int x, int y) {
-        int parinteX = cauta(x), parinteY = cauta(y);
-
-        // Uneste arborele mai mic la arborele mai mare, pentru o complexitate mai buna
-        if (m_dimensiune[parinteX] >= m_dimensiune[parinteY]) {
-            m_parinte[parinteY] = parinteX;
-            m_dimensiune[parinteX] += m_dimensiune[parinteY];
-        } else {
-            m_parinte[parinteX] = parinteY;
-            m_dimensiune[parinteY] += m_dimensiune[parinteX];
-        }
-    }
-};
 
 class Graf {
 private:
