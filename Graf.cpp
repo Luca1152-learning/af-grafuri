@@ -124,6 +124,9 @@ int Graf::neorientatNrCompConexe() {
 }
 
 const auto &Graf::neorientatBiconexe() {
+    // Redimensioneaza
+    m_biconexLow.resize(m_n + 1, 0);
+
     for (int i = 1; i <= m_n; i++) {
         if (!m_biconexLow[i]) {
             neorientatBiconexDfs(i, -1, 1);
@@ -133,6 +136,9 @@ const auto &Graf::neorientatBiconexe() {
 }
 
 const auto &Graf::neorientatMuchiiCritice() {
+    // Redimensioneaza
+    m_criticeLow.resize(m_n + 1, 0);
+
     neorientatMuchiiCriticeDfs(0, -1, 1);
 
     // In rezultat, punem muchiile ce nu au fost marcate ca trebuind sa fie sterse
@@ -146,9 +152,12 @@ const auto &Graf::neorientatMuchiiCritice() {
 }
 
 int Graf::diametru() {
+    // Redimensioneaza
+    m_diametruViz.resize(m_n + 1, false);
+
     diametruDFS(1, 1);
     m_diametruDistMax = 0;
-    memset(m_diametruViz, 0, sizeof(m_diametruViz));
+    fill(m_diametruViz.begin(), m_diametruViz.end(), 0);
     diametruDFS(m_diametruNodMax, 1);
 
     return m_diametruDistMax;
@@ -196,6 +205,11 @@ void Graf::orientatPonderatCitesteMatricePonderi(ifstream &in) {
 }
 
 const auto &Graf::orientatCtc() {
+    // Redimensioneaza
+    m_ctcId.resize(m_n + 1, 0);
+    m_ctcLow.resize(m_n + 1, 0);
+    m_ctcPeStiva.resize(m_n + 1, false);
+
     // Algoritmul lui Tarjan
     for (int i = 1; i <= m_n; i++) {
         // Nu am explorat nodul pana acum (neavand vreun id)
@@ -207,6 +221,11 @@ const auto &Graf::orientatCtc() {
 }
 
 void Graf::orientatRuleazaBellmanFord(int start) {
+    // Redimensioneaza
+    m_bellmanDist.resize(m_n + 1, INF);
+    m_bellmanPuneriInCoada.resize(m_n + 1, 0);
+    m_bellmanInQueue.resize(m_n + 1, 0);
+
     // Gaseste graful de costuri minime, plecand din start la celelalte n-1 noduri.
     // Putem avea circuit de cost negativ -> va fi detectat.
 
@@ -262,6 +281,9 @@ const auto &Graf::getBellmanFordDists() {
 }
 
 const auto &Graf::orientatRuleazaDijkstra(int start) {
+    // Redimensioneaza
+    m_dijkstraDist.resize(m_n + 1, INF);
+
     // Incepem algoritmul din nodul de start
     m_dijkstraDist[start] = 0;
     // Punem in set perechea {0, [nod start]}, 0 fiind distanta de la start pana la el insusi
@@ -316,7 +338,16 @@ const auto &Graf::orientatRoyFloydGetDists() {
 }
 
 void Graf::citesteInputFluxMaxim(ifstream &in) {
+    // Redimensioneaza
+    m_listaAd.clear();
+    m_listaAd.resize(m_n + 1);
+    m_fluxMaximCapacitate.clear();
+    m_fluxMaximCapacitate.resize(m_n + 1);
+
     for (int i = 0; i < m_m; i++) {
+        // Redimensioneaza
+        m_fluxMaximCapacitate[i].resize(m_n + 1);
+
         int x, y, c;
         in >> x >> y >> c;
         m_fluxMaximCapacitate[x][y] = c;
@@ -326,7 +357,7 @@ void Graf::citesteInputFluxMaxim(ifstream &in) {
 }
 
 int Graf::orientatFluxMaximBFS(int start) {
-    memset(m_fluxMaximParinti, 0, sizeof(m_fluxMaximParinti));
+    std::fill(m_fluxMaximParinti.begin(), m_fluxMaximParinti.end(), 0);
 
     m_fluxMaximQueue.push(start);
     m_fluxMaximParinti[start] = -1;
@@ -356,6 +387,9 @@ int Graf::orientatFluxMaximBFS(int start) {
 }
 
 int Graf::orientatFluxMaxim() {
+    // Redimensioneaza
+    m_fluxMaximParinti.resize(m_n + 1, 0);
+
     // Algoritmul Edmonds-Karp
 
     int fluxMaximTotal = 0;
@@ -371,7 +405,7 @@ int Graf::orientatFluxMaxim() {
             m_fluxMaximParinti[m_n] = x;
 
             // Gaseste fluxul minim ce poate fi pompat pe lantul gasit de bfs
-            int fluxMinimLant = INT_MAX, curr = m_n;
+            int fluxMinimLant = INF, curr = m_n;
             while (m_fluxMaximParinti[curr] != -1) {
                 int prev = m_fluxMaximParinti[curr];
                 fluxMinimLant = min(fluxMinimLant, m_fluxMaximCapacitate[prev][curr] - m_fluxMaximFlux[prev][curr]);
@@ -398,6 +432,10 @@ int Graf::orientatFluxMaxim() {
 }
 
 void Graf::citesteInputCicluHamiltonian(ifstream &in) {
+    // Redimensioneaza
+    m_hamiltonListaAd.clear();
+    m_hamiltonListaAd.resize(m_n + 1);
+
     // Citire aproape identica cu una standard prin lista de adiacenta, numai ca in loc sa spuna
     // vecinii ce pleaca din x, spune vecinii ce ajung in x (asta ne intereseaza in algoritm)
     for (int i = 0; i < m_m; i++) {
@@ -409,11 +447,14 @@ void Graf::citesteInputCicluHamiltonian(ifstream &in) {
 }
 
 int Graf::orientatCostMinimCicluHamiltonian() {
+    // Redimensioneaza
+    m_hamiltonMinimDP.clear();
+    m_hamiltonMinimDP.resize(1 << m_n);
+
     // Initializam costurile minime cu INFINIT
-    for (int k = 0; k < 1 << hamiltonMinimMax; k++) {
-        for (int i = 0; i < m_n; i++) {
-            m_hamiltonMinimDP[k][i] = INF;
-        }
+    for (int k = 0; k < 1 << m_n; k++) {
+        // Redimensioneaza
+        m_hamiltonMinimDP[k].resize(m_n + 1, INF);
     }
 
     // Costul minim pe un lant format din nodul 0 (bitul 0 e setat => 1, prima coordonata) si se termina
@@ -467,6 +508,10 @@ int Graf::orientatCostMinimCicluHamiltonian() {
 }
 
 void Graf::neorientatCitesteMultigrafContorizat(ifstream &in) {
+    // Redimensioneaza
+    m_multigrafListaAd.clear();
+    m_multigrafListaAd.resize(m_n + 1);
+
     for (int i = 0; i < m_m; i++) {
         int x, y;
         in >> x >> y;
@@ -476,6 +521,9 @@ void Graf::neorientatCitesteMultigrafContorizat(ifstream &in) {
 }
 
 bool Graf::eCicluEuler() {
+    // Redimensioneaza
+    m_cicluEulerGrade.resize(m_n + 1, 0);
+
     // Putem gasi un ciclu eulerian intr-un graf daca fiecare nod are grad par
 
     // Numaram gradele fiecarui noid (din lista de adiacenta a multigrafului)
@@ -497,6 +545,9 @@ bool Graf::eCicluEuler() {
 }
 
 const auto &Graf::gasesteCicluEuler() {
+    // Redimensioneaza
+    m_cicluEulerFolMuchie.resize(m_m + 1, false);
+
     // Facem un "dfsRecursive iterativ" - daca ar fi recursiv, am avea stack overflow pentru
     // grafuri mari. La "dfsRecursive"-ul asta, nu vrem sa se repete muchiile (si nu nodurile).
 
@@ -663,7 +714,14 @@ void Graf::diametruDFS(int x, int dist) {
 }
 
 void Graf::orientatRoyFloydSetup() {
+    // Redimensioneaza
+    m_royFloydDists.clear();
+    m_royFloydDists.resize(m_n + 1);
+
     for (int i = 1; i <= m_n; i++) {
+        // Redimensioneaza
+        m_royFloydDists[i].resize(m_n + 1);
+
         for (int j = 1; j <= m_n; j++) {
             if (i == j) {
                 m_royFloydDists[i][j] = 0;

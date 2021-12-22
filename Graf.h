@@ -97,7 +97,7 @@ private:
     vector<pair<int, pair<int, int>>> m_listaMuchiiPonderat;
 
     // Constante
-    static const int INF = ((1 << 30) - 1);
+    static constexpr int INF = ((1 << 30) - 1);
     // 2^30-1 ca sa nu fie overflow daca faci INF + INF
 
     // dfs - https://www.infoarena.ro/problema/dfs
@@ -108,65 +108,56 @@ private:
     queue<int> m_bfsQueue;
 
     // CTC - https://www.infoarena.ro/problema/ctc
-    static constexpr int ctcMax = 1;
-    int m_ctcId[ctcMax] = {}, m_ctcLow[ctcMax] = {}, m_ctcUltId = 0;
-    bool m_ctcPeStiva[ctcMax] = {};
+    vector<int> m_ctcId, m_ctcLow;
+    int m_ctcUltId = 0;
+    vector<bool> m_ctcPeStiva;
     list<list<int>> m_ctc;
     stack<int> m_ctcStack;
 
     // Componente biconexe - https://www.infoarena.ro/problema/biconex
-    static constexpr int biconexMax = 1;
     list<list<int>> m_biconexComps;
     stack<int> m_biconexStack;
-    int m_biconexLow[biconexMax] = {};
+    vector<int> m_biconexLow;
 
     // Muchii critice - https://leetcode.com/problems/critical-connections-in-a-network/
-    static constexpr int criticeMax = 1;
     map<pair<int, int>, bool> m_criticeToRemove;
     vector<vector<int>> m_critice;
-    int m_criticeLow[criticeMax] = {}; // Id-ul nodului minim in care te poti intoarce din nodul i
+    vector<int> m_criticeLow; // Id-ul nodului minim in care te poti intoarce din nodul i
 
     // Arbore partial de cost minim - https://www.infoarena.ro/problema/apm
     int m_apcmCost = 0;
     vector<pair<int, int>> m_apcmResult;
 
     // Bellman-Ford - https://infoarena.ro/problema/bellmanford
-    static constexpr int bellmanMax = 1;
-    vector<int> m_bellmanDist = vector<int>(bellmanMax, INT_MAX);
-    int m_bellmanPuneriInCoada[bellmanMax] = {}, m_bellmanInQueue[bellmanMax] = {};
+    vector<int> m_bellmanDist, m_bellmanPuneriInCoada, m_bellmanInQueue;
     queue<int> m_bellmanQueue;
     bool m_bellmanCircuitCostNegativ = false;
 
     // Dijkstra - https://infoarena.ro/problema/dijkstra
-    static constexpr int dijkstraMax = 1;
-    vector<int> m_dijkstraDist = vector<int>(dijkstraMax, INT_MAX);
+    vector<int> m_dijkstraDist;
     set<pair<int, int>> m_dijkstraMinHeap; // "min".. doar e un ordered set (crescator)
 
     // Diametru arbore - https://www.infoarena.ro/problema/darb
-    static constexpr int diametruVizMax = 1;
-    bool m_diametruViz[diametruVizMax] = {};
+    vector<bool> m_diametruViz;
     int m_diametruNodMax = 0, m_diametruDistMax = 0;
 
     // RoyFloyd - https://www.infoarena.ro/problema/royfloyd
-    static constexpr int royFloydMax = 1;
-    int m_royFloydDists[royFloydMax][royFloydMax] = {};
+    vector<vector<int>> m_royFloydDists;
 
     // Flux maxim - https://infoarena.ro/problema/maxflow
-    static constexpr int fluxMaximMax = 1;
-    int m_fluxMaximCapacitate[fluxMaximMax][fluxMaximMax] = {}, m_fluxMaximFlux[fluxMaximMax][fluxMaximMax] = {},
-            m_fluxMaximParinti[fluxMaximMax] = {};
+    vector<vector<int>> m_fluxMaximCapacitate, m_fluxMaximFlux;
+    vector<int> m_fluxMaximParinti;
     queue<int> m_fluxMaximQueue;
 
     // Ciclu hamiltonian de cost minim - https://www.infoarena.ro/problema/hamilton
-    static const int hamiltonMinimMax = 1;
-    vector<pair<int, int>> m_hamiltonListaAd[hamiltonMinimMax];
-    int m_hamiltonMinimDP[1 << hamiltonMinimMax][hamiltonMinimMax] = {};
+    vector<vector<pair<int, int>>> m_hamiltonListaAd;
+    vector<vector<int>> m_hamiltonMinimDP;
 
     // Ciclu eulerian - https://www.infoarena.ro/problema/ciclueuler
-    vector<pair<int, int>> m_multigrafListaAd[100005];
+    vector<vector<pair<int, int>>> m_multigrafListaAd;
     vector<int> m_cicluEulerSol, m_cicluEulerStack;
-    int m_cicluEulerGrade[100005] = {};
-    bool m_cicluEulerFolMuchie[500005] = {};
+    vector<int> m_cicluEulerGrade;
+    vector<bool> m_cicluEulerFolMuchie;
 
 
     // ---------------- Functii private ----------------
