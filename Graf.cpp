@@ -214,7 +214,7 @@ const auto &Graf::orientatCtc() {
     for (int i = 1; i <= m_n; i++) {
         // Nu am explorat nodul pana acum (neavand vreun id)
         if (m_ctcId[i] == 0) {
-            orientatCtcDFS(i);
+            orientatCtcDfs(i);
         }
     }
     return m_ctc;
@@ -595,7 +595,7 @@ void Graf::dfsRecursive(int k) {
     }
 }
 
-void Graf::orientatCtcDFS(int x) {
+void Graf::orientatCtcDfs(int x) {
     m_ctcStack.push(x);
     m_ctcPeStiva[x] = true;
     m_ctcId[x] = m_ctcLow[x] = ++m_ctcUltId;
@@ -603,7 +603,7 @@ void Graf::orientatCtcDFS(int x) {
     for (auto y: m_listaAd[x]) {
         // Nu am explorat nodul pana acum (neavand vreun id)
         if (m_ctcId[y] == 0) {
-            orientatCtcDFS(y);
+            orientatCtcDfs(y);
         }
 
         // Am intalnit un nod care inca nu a fost atribuit unei componente conexe.

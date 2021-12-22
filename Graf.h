@@ -18,22 +18,9 @@ class Graf {
 public:
     explicit Graf(int n = 0, int m = 0);
 
+
     // Citire
     void ponderatCitesteListaMuchii(ifstream &in);
-
-    // dfs - https://www.infoarena.ro/problema/dfs
-    void dfs(int k);
-
-    // bfs - https://www.infoarena.ro/problema/bfs
-    const auto &bfs(int start);
-
-    static bool potiConstruiGraf(vector<int> grade);
-
-    void construiesteApcm();
-
-    const auto &getApcmResult();
-
-    auto getApcmCost();
 
     void neorientatCitesteListaMuchii(ifstream &in);
 
@@ -41,47 +28,86 @@ public:
 
     void neorientatCitesteListaAdiacenta(ifstream &in);
 
-    int neorientatNrCompConexe();
-
-    const auto &neorientatBiconexe();
-
-    const auto &neorientatMuchiiCritice();
-
-    int diametru();
-
-
     void orientatCitesteListaAdiacenta(ifstream &in);
 
     void orientatPonderatCitesteListaAdiacenta(ifstream &in);
 
     void orientatPonderatCitesteMatricePonderi(ifstream &in);
 
+    void neorientatCitesteMultigrafContorizat(ifstream &in);
+
+
+    // dfs - https://www.infoarena.ro/problema/dfs
+    void dfs(int k);
+
+    int neorientatNrCompConexe();
+
+
+    // bfs - https://www.infoarena.ro/problema/bfs
+    const auto &bfs(int start);
+
+
+    // Havel-Hakimi
+    static bool potiConstruiGraf(vector<int> grade);
+
+
+    // Arbore partial de cost minim - https://www.infoarena.ro/problema/apm
+    void construiesteApcm();
+
+    const auto &getApcmResult();
+
+    auto getApcmCost();
+
+
+    // CTC - https://www.infoarena.ro/problema/ctc
     const auto &orientatCtc();
 
+
+    // Componente biconexe - https://www.infoarena.ro/problema/biconex
+    const auto &neorientatBiconexe();
+
+
+    // Muchii critice - https://leetcode.com/problems/critical-connections-in-a-network/
+    const auto &neorientatMuchiiCritice();
+
+
+    // Diametru arbore - https://www.infoarena.ro/problema/darb
+    int diametru();
+
+
+    // Bellman-Ford - https://infoarena.ro/problema/bellmanford
     void orientatRuleazaBellmanFord(int start);
 
     bool circuitNegativBellmanFord();
 
     const auto &getBellmanFordDists();
 
+
+    // Dijkstra - https://infoarena.ro/problema/dijkstra
     const auto &orientatRuleazaDijkstra(int start);
 
+
+    // RoyFloyd - https://www.infoarena.ro/problema/royfloyd
     void orientatRoyFloyd();
 
     const auto &orientatRoyFloydGetDists();
 
+
+    // Flux maxim - https://infoarena.ro/problema/maxflow
     void citesteInputFluxMaxim(ifstream &in);
 
     int orientatFluxMaximBFS(int start = 1);
 
     int orientatFluxMaxim();
 
+
+    // Ciclu hamiltonian de cost minim - https://www.infoarena.ro/problema/hamilton
     void citesteInputCicluHamiltonian(ifstream &in);
 
     int orientatCostMinimCicluHamiltonian();
 
-    void neorientatCitesteMultigrafContorizat(ifstream &in);
 
+    // Ciclu eulerian - https://www.infoarena.ro/problema/ciclueuler
     bool eCicluEuler();
 
     const auto &gasesteCicluEuler();
@@ -161,18 +187,29 @@ private:
 
 
     // ---------------- Functii private ----------------
+    // dfs - https://www.infoarena.ro/problema/dfs
     void dfsRecursive(int k);
 
-    void orientatCtcDFS(int x);
 
+    // CTC - https://www.infoarena.ro/problema/ctc
+    void orientatCtcDfs(int x);
+
+
+    // Componente biconexe - https://www.infoarena.ro/problema/biconex
     void neorientatBiconexAdd(int x, int y);
 
     void neorientatBiconexDfs(int x, int prev, int id);
 
+
+    // Muchii critice - https://leetcode.com/problems/critical-connections-in-a-network/
     void neorientatMuchiiCriticeDfs(int x, int prev, int id);
 
+
+    // Diametru arbore - https://www.infoarena.ro/problema/darb
     void diametruDFS(int x, int dist);
 
+
+    // RoyFloyd - https://www.infoarena.ro/problema/royfloyd
     void orientatRoyFloydSetup();
 };
 
