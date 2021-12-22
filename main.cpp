@@ -13,7 +13,7 @@
 #define INF ((1 << 30) - 1)
 // 2^30-1 ca sa nu fie overflow daca faci INF + INF
 
-const int nMax = 105;
+const int nMax = 1;
 
 using namespace std;
 
@@ -55,7 +55,7 @@ private:
     int m_n, m_m;
     vector<int> m_listaAd[nMax];
     vector<pair<int, int>> m_ponderatListaAd[nMax];
-    int m_ponderatMatrice[105][105] = {};
+    int m_ponderatMatrice[1][1] = {};
     vector<vector<int>> m_listaMuchii;
     vector<pair<int, pair<int, int>>> m_listaMuchiiPonderat;
 
@@ -119,7 +119,7 @@ private:
     queue<int> m_fluxMaximQueue;
 
     // Ciclu hamiltonian de cost minim - https://www.infoarena.ro/problema/hamilton
-    static const int hamiltonMinimMax = 18;
+    static const int hamiltonMinimMax = 1;
     vector<pair<int, int>> m_hamiltonListaAd[hamiltonMinimMax];
     int m_hamiltonMinimDP[1 << hamiltonMinimMax][hamiltonMinimMax] = {};
 
@@ -713,6 +713,79 @@ public:
 
         return (res != INF) ? res : -1;
     }
+
+    vector<pair<int, int>> m_multigrafListaAd[100005];
+    vector<int> m_cicluEulerSol, m_cicluEulerStack;
+    int m_cicluEulerGrade[100005] = {};
+    bool m_cicluEulerFolMuchie[500005] = {};
+
+    void neorientatCitesteMultigrafContorizat(ifstream &in) {
+        for (int i = 0; i < m_m; i++) {
+            int x, y;
+            in >> x >> y;
+            m_multigrafListaAd[x].push_back({y, i});
+            m_multigrafListaAd[y].push_back({x, i});
+        }
+    }
+
+    bool eCicluEuler() {
+        // Putem gasi un ciclu eulerian intr-un graf daca fiecare nod are grad par
+
+        // Numaram gradele fiecarui noid (din lista de adiacenta a multigrafului)
+        for (int x = 1; x <= m_n; x++) {
+            for (auto &y: m_multigrafListaAd[x]) {
+                m_cicluEulerGrade[x]++;
+            }
+        }
+
+        // Verificam ca gradele sunt numere pare
+        for (int x = 1; x <= m_n; x++) {
+            if (m_cicluEulerGrade[x] % 2 == 1) {
+                return false;
+            }
+        }
+
+        // Toate gradele au fost pare => putem construi ciclu eulerian
+        return true;
+    }
+
+    const auto &gasesteCicluEuler() {
+        // Facem un "DFS iterativ" - daca ar fi recursiv, am avea stack overflow pentru
+        // grafuri mari. La "DFS"-ul asta, nu vrem sa se repete muchiile (si nu nodurile).
+
+        // Cautam un ciclu eulerian plecand din nodul 1
+        m_cicluEulerStack.push_back(1);
+
+        // Procesam nodul curent la care s-a ajuns in parcurgerea DFS
+        while (!m_cicluEulerStack.empty()) {
+            int x = m_cicluEulerStack.back();
+
+            // Cautam o muchie ce pleaca din x si care nu a fost folosita
+            bool gasitMuchie = false;
+            int y, i;
+            while (!m_multigrafListaAd[x].empty() && !gasitMuchie) {
+                auto &pairY = m_multigrafListaAd[x].back();
+                m_multigrafListaAd[x].pop_back();
+                y = pairY.first, i = pairY.second;
+                if (!m_cicluEulerFolMuchie[i]) {
+                    gasitMuchie = true;
+                }
+            }
+
+            if (gasitMuchie) {
+                // Am gasit o muchie => continuam cu DFS-ul cu nodul y
+                m_cicluEulerStack.push_back(y);
+                m_cicluEulerFolMuchie[i] = true;
+            } else {
+                // Nu am gasit nicio muchie ce pleaca din x si care nu a fost folosita =>
+                // => nu mai exista cicluri ce pleaca din x si ajung in x
+                m_cicluEulerSol.push_back(x);
+                m_cicluEulerStack.pop_back();
+            }
+        }
+
+        return m_cicluEulerSol;
+    }
 };
 
 int main() {
@@ -721,19 +794,23 @@ int main() {
     cin.tie(nullptr);
 
     // I/O
-    ifstream in("hamilton.in");
-    ofstream out("hamilton.out");
+    ifstream in("ciclueuler.in");
+    ofstream out("ciclueuler.out");
 
     int n, m;
     in >> n >> m;
 
     Graf g(n, m);
-    g.citesteInputCicluHamiltonian(in);
-    in.close();
-
-    int costMinim = g.orientatCostMinimCicluHamiltonian();
-    if (costMinim < 0) out << "Nu exista solutie";
-    else out << costMinim;
+    g.neorientatCitesteMultigrafContorizat(in);
+    if (!g.eCicluEuler()) {
+        out << -1;
+        out.close();
+        return 0;
+    }
+    const auto &cicluEuler = g.gasesteCicluEuler();
+    for (auto x: cicluEuler) {
+        out << x << " ";
+    }
 
     out.close();
     return 0;
